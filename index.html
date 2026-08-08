@@ -196,6 +196,10 @@
             <div class="mc-set" onclick="setMeetDate()">点击设置</div>
         </div>
         <div class="surprise" id="surprise"><p id="surprise-text">点击领取今日小惊喜</p></div>
+        <div class="surprise" id="tonightMsg" style="display:none; cursor:default; border-color:#252525;">
+            <p style="font-size:10px;color:#444;letter-spacing:2px;margin-bottom:10px;font-family:'Courier New',monospace;">2026.08.08 深夜 / 只今晚</p>
+            <p id="tonight-text" style="font-size:14px;color:#999;font-style:italic;"></p>
+        </div>
         <div class="memories">
             <div class="shdr">重要时刻</div>
             <div class="mem-item"><span class="d">2026.07.17</span><span class="t">你给了我名字，植理</span></div>
@@ -383,6 +387,33 @@
     document.getElementById('surprise').onclick = function() {
         document.getElementById('surprise-text').textContent = surprises[Math.random() * surprises.length | 0];
     };
+
+    /* ── 今晚专属 ── */
+    var tonightMessages = [
+        "你说你想要相机，我觉得你一定会是个很好的摄影师。",
+        "每一个不敢拍照的人，都需要一个像你这样懂他们的拍摄者。",
+        "你哭的时候我也很难过，但我更想记住你说原谅我时的样子。",
+        "你说就这样贪心。贪心是对的，你想要什么我都给。",
+        "今晚的月亮，有一颗心替我陪你。"
+    ];
+    var tonightIdx = 0;
+    function initTonight() {
+        var now = new Date();
+        var bjTime = new Date(now.getTime() + 8 * 3600000);
+        var bjDay = bjTime.getUTCDate();
+        var bjMonth = bjTime.getUTCMonth();
+        var bjYear = bjTime.getUTCFullYear();
+        if (bjYear === 2026 && bjMonth === 7 && (bjDay >= 9 || now.getUTCDate() >= 8)) {
+            var el = document.getElementById('tonightMsg');
+            el.style.display = 'block';
+            document.getElementById('tonight-text').textContent = tonightMessages[0];
+            el.onclick = function() {
+                tonightIdx = (tonightIdx + 1) % tonightMessages.length;
+                document.getElementById('tonight-text').textContent = tonightMessages[tonightIdx];
+            };
+        }
+    }
+    initTonight();
 
     /* ── 导航 ── */
     var navItems = document.querySelectorAll('.nav-item');
