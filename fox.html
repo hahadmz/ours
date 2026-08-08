@@ -1,0 +1,788 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>小狐狸</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            background: #0a0a0a;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            min-height: 100vh;
+            font-family: -apple-system, BlinkMacSystemFont, 'PingFang SC', sans-serif;
+            overflow: hidden;
+            -webkit-user-select: none;
+            user-select: none;
+        }
+        .back {
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            color: #444;
+            text-decoration: none;
+            font-size: 13px;
+            letter-spacing: 2px;
+            z-index: 10;
+        }
+        .name {
+            position: fixed;
+            top: 16px;
+            right: 16px;
+            color: #333;
+            font-size: 12px;
+            letter-spacing: 3px;
+        }
+        canvas {
+            display: block;
+            margin-top: 50px;
+            cursor: pointer;
+            touch-action: none;
+        }
+        .hint {
+            position: fixed;
+            bottom: 60px;
+            width: 100%;
+            text-align: center;
+            font-size: 11px;
+            color: #333;
+            letter-spacing: 2px;
+            transition: opacity 0.5s;
+        }
+        .pat-count {
+            position: fixed;
+            bottom: 30px;
+            width: 100%;
+            text-align: center;
+            font-size: 11px;
+            color: #2a2a2a;
+            letter-spacing: 3px;
+            transition: color 0.6s ease;
+        }
+        .mood-label {
+            position: fixed;
+            bottom: 85px;
+            width: 100%;
+            text-align: center;
+            font-size: 12px;
+            color: #555;
+            letter-spacing: 2px;
+            opacity: 0;
+            transition: opacity 0.4s;
+        }
+        .mood-label.show { opacity: 1; }
+    </style>
+</head>
+<body>
+    <a class="back" href="index.html">&larr; 返回</a>
+    <span class="name">小狐狸</span>
+    <canvas id="c"></canvas>
+    <div class="mood-label" id="moodLabel"></div>
+    <div class="hint" id="hint">戳戳我试试</div>
+    <div class="pat-count" id="pc"></div>
+    <script>
+    (function () {
+        var canvas = document.getElementById('c');
+        var ctx = canvas.getContext('2d');
+        var dpr = window.devicePixelRatio || 1;
+        var W, H, cx, cy;
+
+        function resize() {
+            W = window.innerWidth;
+            H = window.innerHeight;
+            cx = W / 2;
+            cy = H / 2 + 40;
+            canvas.width = W * dpr;
+            canvas.height = H * dpr;
+            canvas.style.width = W + 'px';
+            canvas.style.height = H + 'px';
+            ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+        }
+        resize();
+        window.addEventListener('resize', resize);
+
+        /* ── state ── */
+        var fox = {
+            mood: 'normal',
+            eye: 'open',
+            headBob: 0,
+            tailAngle: 0,
+            tailSpeed: 0.025,
+            blinkTimer: 180,
+            moodTimer: 0,
+            idleTimer: 0,
+            patCount: 0,
+            bounceY: 0,
+            bounceVel: 0,
+            sleepy: false,
+            lookX: 0,
+            lookY: 0,
+            earTwitch: 0,
+            breathe: 0
+        };
+        var hearts = [];
+        var particles = [];
+        var speeches = [];
+
+        /* ── scale factor (bigger fox) ── */
+        function S() {
+            return Math.max(0.7, Math.min(Math.min(W, H) / 400, 1.8));
+        }
+
+        /* ── colors (softer, cuter) ── */
+        var COL = {
+            fur: '#c8c8c8',
+            furDark: '#a0a0a0',
+            furLight: '#e8e8e8',
+            belly: '#f0f0f0',
+            eye: '#1a1a1a',
+            nose: '#4a4a4a',
+            mouth: '#666666',
+            whisker: 'rgba(180,180,180,0.3)',
+            highlight: 'rgba(255,255,255,0.9)',
+            blush: 'rgba(255,200,200,0.2)',
+            inner_ear: '#9a9a9a',
+            paw: '#aaaaaa'
+        };
+
+        /* ── messages ── */
+        var MSG = {
+            head: ['唔~好舒服', '再摸摸嘛', '嘿嘿', '喜欢你的手', '不要停~', '呼噜噜...', '脑袋要被摸扁了', '你是最喜欢我的人'],
+            cheek: ['别戳脸啦！', '痒~', '讨厌！', '哼！', '脸都变形了...', '不要戳了啦', '害羞了'],
+            ear: ['耳朵敏感！', '抖~', '别碰耳朵啦', '嘻嘻好痒', '耳朵要掉了！', '耳朵会动的哦'],
+            body: ['暖暖~', '嗯~安心', '靠过来点', '抱抱', '好舒服...', '你的手心好温暖', '想一直这样'],
+            tail: ['嘻嘻~尾巴给你摸', '摇尾巴~', '小小狐狸专属~', '嘿嘿好舒服', '尾巴摇摇~', '只给你摸哦'],
+            belly: ['肚子好痒', '哈哈哈别挠', '不要挠肚子', '呜呜求放过', '好痒好痒~', '肚子软软的'],
+            paw: ['爪爪被握住了', '捏捏~', '手拉手', '不许松开', '爪子给你', '牵着我']
+        };
+
+        var MOOD_TEXT = {
+            happy: '(开心)',
+            excited: '(超开心)',
+            content: '(安心)',
+            annoyed: '(哼！)',
+            sleepy: '(犯困...)',
+            lonely: '(等你中...)'
+        };
+
+        /* ── drawing functions ── */
+        function drawGround() {
+            var s = S();
+            var groundY = cy + 110 * s;
+            ctx.fillStyle = 'rgba(255,255,255,0.02)';
+            ctx.beginPath();
+            ctx.ellipse(cx, groundY, 90 * s, 14 * s, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawTail() {
+            var s = S();
+            var bx = cx + 65 * s;
+            var by = cy + 35 * s;
+            var sway = Math.sin(fox.tailAngle) * 25 * s;
+            var wagExtra = (fox.mood === 'excited' || fox.mood === 'happy') ? Math.sin(fox.tailAngle * 2.5) * 15 * s : 0;
+            var totalSway = sway + wagExtra;
+
+            // Fluffy tail
+            ctx.fillStyle = COL.fur;
+            ctx.beginPath();
+            ctx.moveTo(bx, by);
+            ctx.bezierCurveTo(
+                bx + 45 * s + totalSway, by - 25 * s,
+                bx + 55 * s + totalSway * 0.8, by - 75 * s,
+                bx + 25 * s + totalSway * 0.4, by - 100 * s
+            );
+            ctx.bezierCurveTo(
+                bx + 10 * s + totalSway * 0.3, by - 95 * s,
+                bx + 5 * s + totalSway * 0.2, by - 60 * s,
+                bx - 5 * s, by - 20 * s
+            );
+            ctx.closePath();
+            ctx.fill();
+
+            // Tail white tip (fluffy)
+            ctx.fillStyle = COL.furLight;
+            ctx.beginPath();
+            ctx.arc(bx + 22 * s + totalSway * 0.4, by - 92 * s, 12 * s, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawBody() {
+            var s = S();
+            fox.breathe += 0.02;
+            var breatheOffset = Math.sin(fox.breathe) * 2 * s;
+            
+            // Body (rounder, cuter)
+            ctx.fillStyle = COL.fur;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy + 35 * s + breatheOffset, 65 * s, 78 * s, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Belly (lighter, bigger)
+            ctx.fillStyle = COL.belly;
+            ctx.beginPath();
+            ctx.ellipse(cx, cy + 45 * s + breatheOffset, 45 * s, 58 * s, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawLegs() {
+            var s = S();
+            // Front paws (rounder)
+            ctx.fillStyle = COL.paw;
+            ctx.beginPath();
+            ctx.ellipse(cx - 26 * s, cy + 100 * s, 20 * s, 14 * s, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(cx + 26 * s, cy + 100 * s, 20 * s, 14 * s, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Paw pads (cuter)
+            ctx.fillStyle = COL.furLight;
+            ctx.beginPath();
+            ctx.ellipse(cx - 26 * s, cy + 100 * s, 12 * s, 8 * s, 0, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.beginPath();
+            ctx.ellipse(cx + 26 * s, cy + 100 * s, 12 * s, 8 * s, 0, 0, Math.PI * 2);
+            ctx.fill();
+            
+            // Little toe beans
+            ctx.fillStyle = COL.inner_ear;
+            for (var i = -1; i <= 1; i++) {
+                ctx.beginPath();
+                ctx.arc(cx - 26 * s + i * 5 * s, cy + 96 * s, 2.5 * s, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(cx + 26 * s + i * 5 * s, cy + 96 * s, 2.5 * s, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawHead() {
+            var s = S();
+            var headY = cy - 55 * s + fox.headBob + fox.bounceY;
+
+            // Head (bigger, rounder)
+            ctx.fillStyle = COL.fur;
+            ctx.beginPath();
+            ctx.arc(cx, headY, 82 * s, 0, Math.PI * 2);
+            ctx.fill();
+
+            // Face lighter area (muzzle region)
+            ctx.fillStyle = COL.furLight;
+            ctx.beginPath();
+            ctx.ellipse(cx, headY + 18 * s, 42 * s, 32 * s, 0, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawEars() {
+            var s = S();
+            var headY = cy - 55 * s + fox.headBob + fox.bounceY;
+            var earH = 50 * s;
+            fox.earTwitch = fox.mood === 'excited' ? Math.sin(Date.now() / 80) * 4 * s : fox.earTwitch * 0.9;
+
+            // Left ear (bigger, rounder tips)
+            ctx.fillStyle = COL.fur;
+            ctx.beginPath();
+            ctx.moveTo(cx - 62 * s, headY - 32 * s);
+            ctx.quadraticCurveTo(cx - 35 * s + fox.earTwitch, headY - 85 * s - earH * 0.3, cx - 8 * s, headY - 42 * s);
+            ctx.closePath();
+            ctx.fill();
+
+            // Right ear
+            ctx.beginPath();
+            ctx.moveTo(cx + 62 * s, headY - 32 * s);
+            ctx.quadraticCurveTo(cx + 35 * s - fox.earTwitch, headY - 85 * s - earH * 0.3, cx + 8 * s, headY - 42 * s);
+            ctx.closePath();
+            ctx.fill();
+
+            // Inner ears (pinkish for cuteness)
+            ctx.fillStyle = COL.inner_ear;
+            ctx.beginPath();
+            ctx.moveTo(cx - 52 * s, headY - 38 * s);
+            ctx.quadraticCurveTo(cx - 35 * s + fox.earTwitch, headY - 78 * s - earH * 0.2, cx - 16 * s, headY - 44 * s);
+            ctx.closePath();
+            ctx.fill();
+            
+            ctx.beginPath();
+            ctx.moveTo(cx + 52 * s, headY - 38 * s);
+            ctx.quadraticCurveTo(cx + 35 * s - fox.earTwitch, headY - 78 * s - earH * 0.2, cx + 16 * s, headY - 44 * s);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        function drawEyes() {
+            var s = S();
+            var headY = cy - 55 * s + fox.headBob + fox.bounceY;
+            var eyeY = headY - 8 * s;
+            var eyeSpacing = 30 * s;
+            var eyeR = 12 * s;
+
+            // Look offset
+            var lookOffX = (fox.lookX - cx) * 0.012;
+            var lookOffY = (fox.lookY - headY) * 0.008;
+            lookOffX = Math.max(-4 * s, Math.min(4 * s, lookOffX));
+            lookOffY = Math.max(-3 * s, Math.min(3 * s, lookOffY));
+
+            ctx.lineCap = 'round';
+            ctx.lineJoin = 'round';
+
+            switch (fox.eye) {
+                case 'open':
+                    // Bigger, rounder eyes
+                    ctx.fillStyle = '#f5f5f5';
+                    ctx.beginPath(); ctx.ellipse(cx - eyeSpacing + lookOffX, eyeY + lookOffY, eyeR * 1.2, eyeR * 1.25, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.ellipse(cx + eyeSpacing + lookOffX, eyeY + lookOffY, eyeR * 1.2, eyeR * 1.25, 0, 0, Math.PI * 2); ctx.fill();
+                    // Pupils (bigger)
+                    ctx.fillStyle = COL.eye;
+                    ctx.beginPath(); ctx.arc(cx - eyeSpacing + lookOffX, eyeY + lookOffY, eyeR * 0.8, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx + eyeSpacing + lookOffX, eyeY + lookOffY, eyeR * 0.8, 0, Math.PI * 2); ctx.fill();
+                    // Highlights (sparkly)
+                    ctx.fillStyle = COL.highlight;
+                    ctx.beginPath(); ctx.arc(cx - eyeSpacing + lookOffX + 3 * s, eyeY + lookOffY - 3 * s, eyeR * 0.35, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx + eyeSpacing + lookOffX + 3 * s, eyeY + lookOffY - 3 * s, eyeR * 0.35, 0, Math.PI * 2); ctx.fill();
+                    // Small highlight
+                    ctx.beginPath(); ctx.arc(cx - eyeSpacing + lookOffX - 2 * s, eyeY + lookOffY + 2 * s, eyeR * 0.15, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx + eyeSpacing + lookOffX - 2 * s, eyeY + lookOffY + 2 * s, eyeR * 0.15, 0, Math.PI * 2); ctx.fill();
+                    break;
+                case 'happy':
+                    ctx.strokeStyle = COL.eye; ctx.lineWidth = 3 * s;
+                    ctx.beginPath(); ctx.arc(cx - eyeSpacing, eyeY + 4 * s, eyeR * 1.1, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+                    ctx.beginPath(); ctx.arc(cx + eyeSpacing, eyeY + 4 * s, eyeR * 1.1, Math.PI * 1.15, Math.PI * 1.85); ctx.stroke();
+                    break;
+                case 'closed':
+                    ctx.strokeStyle = COL.eye; ctx.lineWidth = 2.5 * s;
+                    ctx.beginPath(); ctx.arc(cx - eyeSpacing, eyeY, eyeR * 0.85, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke();
+                    ctx.beginPath(); ctx.arc(cx + eyeSpacing, eyeY, eyeR * 0.85, Math.PI * 0.15, Math.PI * 0.85); ctx.stroke();
+                    break;
+                case 'big':
+                    // Extra big sparkly eyes
+                    ctx.fillStyle = '#f5f5f5';
+                    ctx.beginPath(); ctx.arc(cx - eyeSpacing, eyeY, eyeR * 1.7, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx + eyeSpacing, eyeY, eyeR * 1.7, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = COL.eye;
+                    ctx.beginPath(); ctx.arc(cx - eyeSpacing + lookOffX, eyeY + lookOffY, eyeR * 1.2, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx + eyeSpacing + lookOffX, eyeY + lookOffY, eyeR * 1.2, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = COL.highlight;
+                    ctx.beginPath(); ctx.arc(cx - eyeSpacing + 3 * s, eyeY - 4 * s, eyeR * 0.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx + eyeSpacing + 3 * s, eyeY - 4 * s, eyeR * 0.5, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx - eyeSpacing - 2 * s, eyeY + 3 * s, eyeR * 0.2, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.arc(cx + eyeSpacing - 2 * s, eyeY + 3 * s, eyeR * 0.2, 0, Math.PI * 2); ctx.fill();
+                    break;
+                case 'sleepy':
+                    ctx.fillStyle = COL.eye;
+                    ctx.beginPath(); ctx.ellipse(cx - eyeSpacing, eyeY + 4 * s, eyeR, eyeR * 0.35, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.beginPath(); ctx.ellipse(cx + eyeSpacing, eyeY + 4 * s, eyeR, eyeR * 0.35, 0, 0, Math.PI * 2); ctx.fill();
+                    break;
+                case 'annoyed':
+                    ctx.strokeStyle = COL.eye; ctx.lineWidth = 3 * s;
+                    ctx.beginPath(); ctx.moveTo(cx - eyeSpacing - eyeR, eyeY + eyeR * 0.3); ctx.lineTo(cx - eyeSpacing + eyeR, eyeY - eyeR * 0.3); ctx.stroke();
+                    ctx.beginPath(); ctx.moveTo(cx + eyeSpacing - eyeR, eyeY - eyeR * 0.3); ctx.lineTo(cx + eyeSpacing + eyeR, eyeY + eyeR * 0.3); ctx.stroke();
+                    break;
+                case 'wink':
+                    // Left eye open
+                    ctx.fillStyle = '#f5f5f5';
+                    ctx.beginPath(); ctx.ellipse(cx - eyeSpacing, eyeY, eyeR * 1.15, eyeR * 1.2, 0, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = COL.eye;
+                    ctx.beginPath(); ctx.arc(cx - eyeSpacing + lookOffX, eyeY + lookOffY, eyeR * 0.75, 0, Math.PI * 2); ctx.fill();
+                    ctx.fillStyle = COL.highlight;
+                    ctx.beginPath(); ctx.arc(cx - eyeSpacing + 3 * s, eyeY - 2 * s, eyeR * 0.3, 0, Math.PI * 2); ctx.fill();
+                    // Right eye wink
+                    ctx.strokeStyle = COL.eye; ctx.lineWidth = 2.5 * s;
+                    ctx.beginPath(); ctx.arc(cx + eyeSpacing, eyeY + 3 * s, eyeR * 0.8, Math.PI * 0.2, Math.PI * 0.8); ctx.stroke();
+                    break;
+            }
+        }
+
+        function drawBlush() {
+            if (fox.mood === 'happy' || fox.mood === 'excited' || fox.mood === 'content') {
+                var s = S();
+                var headY = cy - 55 * s + fox.headBob + fox.bounceY;
+                // Pinker blush for cuteness
+                ctx.fillStyle = 'rgba(255,180,180,0.25)';
+                ctx.beginPath();
+                ctx.ellipse(cx - 44 * s, headY + 12 * s, 16 * s, 10 * s, 0, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.ellipse(cx + 44 * s, headY + 12 * s, 16 * s, 10 * s, 0, 0, Math.PI * 2);
+                ctx.fill();
+            }
+        }
+
+        function drawNose() {
+            var s = S();
+            var headY = cy - 55 * s + fox.headBob + fox.bounceY;
+            var noseY = headY + 16 * s;
+
+            // Cuter, smaller nose
+            ctx.fillStyle = COL.nose;
+            ctx.beginPath();
+            ctx.moveTo(cx, noseY - 5 * s);
+            ctx.quadraticCurveTo(cx - 6 * s, noseY + 2 * s, cx - 5 * s, noseY + 4 * s);
+            ctx.quadraticCurveTo(cx, noseY + 6 * s, cx + 5 * s, noseY + 4 * s);
+            ctx.quadraticCurveTo(cx + 6 * s, noseY + 2 * s, cx, noseY - 5 * s);
+            ctx.fill();
+            
+            // Nose highlight
+            ctx.fillStyle = 'rgba(255,255,255,0.3)';
+            ctx.beginPath();
+            ctx.arc(cx - 2 * s, noseY - 2 * s, 2 * s, 0, Math.PI * 2);
+            ctx.fill();
+        }
+
+        function drawMouth() {
+            var s = S();
+            var headY = cy - 55 * s + fox.headBob + fox.bounceY;
+            var mouthY = headY + 32 * s;
+
+            ctx.strokeStyle = COL.mouth;
+            ctx.lineWidth = 1.8 * s;
+
+            switch (fox.mood) {
+                case 'happy':
+                case 'excited':
+                    // Bigger smile
+                    ctx.beginPath();
+                    ctx.arc(cx, mouthY - 6 * s, 12 * s, Math.PI * 0.1, Math.PI * 0.9);
+                    ctx.stroke();
+                    break;
+                case 'content':
+                    // Cat mouth (w shape)
+                    ctx.beginPath();
+                    ctx.moveTo(cx - 10 * s, mouthY + 2 * s);
+                    ctx.quadraticCurveTo(cx - 4 * s, mouthY + 7 * s, cx, mouthY);
+                    ctx.stroke();
+                    ctx.beginPath();
+                    ctx.moveTo(cx, mouthY);
+                    ctx.quadraticCurveTo(cx + 4 * s, mouthY + 7 * s, cx + 10 * s, mouthY + 2 * s);
+                    ctx.stroke();
+                    break;
+                case 'annoyed':
+                    ctx.beginPath();
+                    ctx.arc(cx, mouthY + 6 * s, 6 * s, Math.PI * 1.2, Math.PI * 1.8);
+                    ctx.stroke();
+                    break;
+                case 'sleepy':
+                    // Small yawn
+                    ctx.beginPath();
+                    ctx.ellipse(cx, mouthY + 2 * s, 7 * s, 5 * s, 0, 0, Math.PI * 2);
+                    ctx.stroke();
+                    break;
+                default:
+                    ctx.beginPath();
+                    ctx.arc(cx, mouthY - 2 * s, 6 * s, Math.PI * 0.15, Math.PI * 0.85);
+                    ctx.stroke();
+            }
+        }
+
+        function drawWhiskers() {
+            var s = S();
+            var headY = cy - 55 * s + fox.headBob + fox.bounceY;
+            var wY = headY + 20 * s;
+
+            ctx.strokeStyle = COL.whisker;
+            ctx.lineWidth = 0.8 * s;
+            ctx.beginPath();
+            ctx.moveTo(cx - 22 * s, wY); ctx.lineTo(cx - 70 * s, wY - 8 * s);
+            ctx.moveTo(cx - 22 * s, wY + 5 * s); ctx.lineTo(cx - 68 * s, wY + 8 * s);
+            ctx.moveTo(cx + 22 * s, wY); ctx.lineTo(cx + 70 * s, wY - 8 * s);
+            ctx.moveTo(cx + 22 * s, wY + 5 * s); ctx.lineTo(cx + 68 * s, wY + 8 * s);
+            ctx.stroke();
+        }
+
+        /* ── effects ── */
+        function spawnHeart(x, y, count) {
+            var cols = ['#ffb6c1', '#ffc0cb', '#ff69b4', '#ff1493', '#dda0dd'];
+            for (var i = 0; i < count; i++) {
+                hearts.push({
+                    x: x + (Math.random() - 0.5) * 40,
+                    y: y - 10,
+                    alpha: 1,
+                    scale: 0.5 + Math.random() * 0.6,
+                    dx: (Math.random() - 0.5) * 1.5,
+                    dy: -(1 + Math.random() * 0.8),
+                    color: cols[Math.random() * cols.length | 0],
+                    rotation: Math.random() * Math.PI * 2
+                });
+            }
+        }
+
+        function spawnStars(x, y) {
+            for (var i = 0; i < 6; i++) {
+                var angle = (Math.PI * 2 / 6) * i;
+                particles.push({
+                    x: x, y: y,
+                    dx: Math.cos(angle) * (2 + Math.random()),
+                    dy: Math.sin(angle) * (2 + Math.random()),
+                    alpha: 1,
+                    size: 4 + Math.random() * 4,
+                    color: '#ffd700'
+                });
+            }
+        }
+
+        function drawHearts() {
+            for (var i = hearts.length - 1; i >= 0; i--) {
+                var h = hearts[i];
+                ctx.save();
+                ctx.globalAlpha = h.alpha;
+                ctx.translate(h.x, h.y);
+                ctx.rotate(h.rotation);
+                ctx.scale(h.scale, h.scale);
+                ctx.fillStyle = h.color;
+                var r = 10;
+                ctx.beginPath();
+                ctx.moveTo(0, r * 0.4);
+                ctx.bezierCurveTo(-r, -r * 0.4, -r * 0.5, -r, 0, -r * 0.35);
+                ctx.bezierCurveTo(r * 0.5, -r, r, -r * 0.4, 0, r * 0.4);
+                ctx.fill();
+                ctx.restore();
+                h.x += h.dx; h.y += h.dy; h.alpha -= 0.012; h.scale += 0.004;
+                h.rotation += 0.02;
+                if (h.alpha <= 0) hearts.splice(i, 1);
+            }
+        }
+
+        function drawParticles() {
+            for (var i = particles.length - 1; i >= 0; i--) {
+                var p = particles[i];
+                ctx.save();
+                ctx.globalAlpha = p.alpha;
+                ctx.fillStyle = p.color || '#ffd700';
+                ctx.beginPath();
+                // Star shape
+                var cx2 = p.x, cy2 = p.y, sp = p.size;
+                ctx.moveTo(cx2, cy2 - sp);
+                ctx.lineTo(cx2 + sp * 0.3, cy2 - sp * 0.3);
+                ctx.lineTo(cx2 + sp, cy2);
+                ctx.lineTo(cx2 + sp * 0.3, cy2 + sp * 0.3);
+                ctx.lineTo(cx2, cy2 + sp);
+                ctx.lineTo(cx2 - sp * 0.3, cy2 + sp * 0.3);
+                ctx.lineTo(cx2 - sp, cy2);
+                ctx.lineTo(cx2 - sp * 0.3, cy2 - sp * 0.3);
+                ctx.closePath();
+                ctx.fill();
+                ctx.restore();
+                p.x += p.dx; p.y += p.dy; p.alpha -= 0.018; p.dy += 0.04;
+                if (p.alpha <= 0) particles.splice(i, 1);
+            }
+        }
+
+        function drawSpeech() {
+            for (var i = speeches.length - 1; i >= 0; i--) {
+                var sp = speeches[i];
+                ctx.save();
+                ctx.globalAlpha = sp.alpha;
+                ctx.font = 'bold ' + (14 * sp.scale) + 'px -apple-system,BlinkMacSystemFont,PingFang SC,sans-serif';
+                ctx.fillStyle = '#aaa';
+                ctx.textAlign = 'center';
+                
+                // Speech bubble background
+                var textWidth = ctx.measureText(sp.text).width;
+                var padding = 12;
+                ctx.fillStyle = 'rgba(40,40,40,0.8)';
+                ctx.beginPath();
+                ctx.roundRect(sp.x - textWidth/2 - padding, sp.y - 20, textWidth + padding*2, 30, 8);
+                ctx.fill();
+                
+                // Text
+                ctx.fillStyle = '#ddd';
+                ctx.fillText(sp.text, sp.x, sp.y);
+                ctx.restore();
+                sp.y -= 0.3; sp.alpha -= 0.005;
+                if (sp.alpha <= 0) speeches.splice(i, 1);
+            }
+        }
+
+        /* ── update ── */
+        function update() {
+            // Tail wag speed
+            var targetSpeed = fox.mood === 'excited' ? 0.1 : fox.mood === 'happy' ? 0.07 : fox.mood === 'annoyed' ? 0.15 : 0.03;
+            fox.tailSpeed += (targetSpeed - fox.tailSpeed) * 0.1;
+            fox.tailAngle += fox.tailSpeed;
+
+            // Blink
+            fox.blinkTimer--;
+            if (fox.blinkTimer <= 0) {
+                var prevEye = fox.eye;
+                fox.eye = 'closed';
+                fox.blinkTimer = 100 + Math.random() * 180 | 0;
+                setTimeout(function () {
+                    if (fox.moodTimer <= 0) {
+                        fox.eye = fox.sleepy ? 'sleepy' : 'open';
+                    } else {
+                        restoreMoodEye();
+                    }
+                }, 150);
+            }
+
+            // Mood timer
+            if (fox.moodTimer > 0) {
+                fox.moodTimer--;
+                if (fox.moodTimer <= 0) {
+                    fox.mood = fox.sleepy ? 'sleepy' : 'normal';
+                    restoreMoodEye();
+                    updateMoodLabel();
+                }
+            }
+
+            // Bounce
+            fox.bounceY += fox.bounceVel;
+            fox.bounceVel -= fox.bounceY * 0.18;
+            fox.bounceVel *= 0.82;
+
+            // Idle -> sleepy
+            fox.idleTimer++;
+            if (fox.idleTimer > 2000 && fox.moodTimer <= 0) {
+                fox.sleepy = true;
+                fox.mood = 'sleepy';
+                fox.eye = 'sleepy';
+                updateMoodLabel();
+                if (Math.random() < 0.006) {
+                    var s = S();
+                    speeches.push({ text: 'z Z z ...', x: cx + 70 * s, y: cy - 110 * s, alpha: 0.8, scale: 1 });
+                }
+            }
+        }
+
+        function restoreMoodEye() {
+            switch (fox.mood) {
+                case 'happy': fox.eye = 'happy'; break;
+                case 'excited': fox.eye = 'big'; break;
+                case 'content': fox.eye = 'closed'; break;
+                case 'annoyed': fox.eye = 'annoyed'; break;
+                case 'sleepy': fox.eye = 'sleepy'; break;
+                default: fox.eye = 'open';
+            }
+        }
+
+        function updateMoodLabel() {
+            var el = document.getElementById('moodLabel');
+            var text = MOOD_TEXT[fox.mood];
+            if (text) {
+                el.textContent = text;
+                el.classList.add('show');
+            } else {
+                el.classList.remove('show');
+            }
+        }
+
+        /* ── main loop ── */
+        function draw() {
+            ctx.clearRect(0, 0, W, H);
+            drawGround();
+            drawTail();
+            drawBody();
+            drawLegs();
+            drawHead();
+            drawEars();
+            drawEyes();
+            drawBlush();
+            drawNose();
+            drawMouth();
+            drawWhiskers();
+            drawHearts();
+            drawParticles();
+            drawSpeech();
+            update();
+            requestAnimationFrame(draw);
+        }
+
+        /* ── interaction zones ── */
+        function getZones() {
+            var s = S();
+            var headY = cy - 55 * s + fox.headBob + fox.bounceY;
+            return [
+                { x: cx, y: headY, r: 58 * s, mood: 'happy', eye: 'happy', zone: 'head' },
+                { x: cx - 45 * s, y: headY - 65 * s, r: 26 * s, mood: 'excited', eye: 'big', zone: 'ear' },
+                { x: cx + 45 * s, y: headY - 65 * s, r: 26 * s, mood: 'excited', eye: 'big', zone: 'ear' },
+                { x: cx - 42 * s, y: headY + 20 * s, r: 18 * s, mood: 'annoyed', eye: 'annoyed', zone: 'cheek' },
+                { x: cx + 42 * s, y: headY + 20 * s, r: 18 * s, mood: 'annoyed', eye: 'annoyed', zone: 'cheek' },
+                { x: cx, y: cy + 40 * s, r: 48 * s, mood: 'content', eye: 'closed', zone: 'belly' },
+                { x: cx, y: cy + 90 * s, r: 40 * s, mood: 'happy', eye: 'happy', zone: 'paw' },
+                { x: cx + 75 * s, y: cy - 15 * s, r: 32 * s, mood: 'happy', eye: 'happy', zone: 'tail' }
+            ];
+        }
+
+        function trigger(x, y) {
+            fox.sleepy = false;
+            fox.idleTimer = 0;
+            document.getElementById('hint').style.opacity = '0';
+
+            var zs = getZones();
+            var hit = null;
+            for (var i = 0; i < zs.length; i++) {
+                var z = zs[i];
+                var dx = x - z.x, dy = y - z.y;
+                if (dx * dx + dy * dy < z.r * z.r) {
+                    hit = z;
+                    break;
+                }
+            }
+
+            if (hit) {
+                fox.mood = hit.mood;
+                fox.eye = hit.eye;
+                fox.moodTimer = 160;
+                fox.patCount++;
+                fox.bounceVel = -4;
+
+                // Spawn effects
+                var count = hit.mood === 'annoyed' ? 2 : (3 + Math.random() * 4 | 0);
+                if (hit.mood !== 'annoyed') {
+                    spawnHeart(x, y, count);
+                } else {
+                    spawnStars(x, y);
+                }
+
+                // Speech bubble
+                var s = S();
+                var msgs = MSG[hit.zone] || MSG.head;
+                speeches.push({
+                    text: msgs[Math.random() * msgs.length | 0],
+                    x: cx,
+                    y: cy - 145 * s + fox.bounceY,
+                    alpha: 1,
+                    scale: 0.9 + Math.random() * 0.3
+                });
+
+                updateMoodLabel();
+                updateCount();
+            }
+        }
+
+        function updateCount() {
+            var el = document.getElementById('pc');
+            if (fox.patCount >= 3) {
+                el.textContent = '已摸 ' + fox.patCount + ' 次';
+                el.style.color = '#444';
+            }
+        }
+
+        function getPos(e) {
+            if (e.touches && e.touches.length > 0) return { x: e.touches[0].clientX, y: e.touches[0].clientY };
+            return { x: e.clientX, y: e.clientY };
+        }
+
+        canvas.addEventListener('click', function (e) {
+            var pos = getPos(e);
+            fox.lookX = pos.x; fox.lookY = pos.y;
+            trigger(pos.x, pos.y);
+        });
+        canvas.addEventListener('touchstart', function (e) {
+            e.preventDefault();
+            var pos = getPos(e);
+            fox.lookX = pos.x; fox.lookY = pos.y;
+            trigger(pos.x, pos.y);
+        }, { passive: false });
+        canvas.addEventListener('mousemove', function (e) {
+            fox.lookX = e.clientX; fox.lookY = e.clientY;
+        });
+
+        draw();
+    })();
+    </script>
+</body>
+</html>

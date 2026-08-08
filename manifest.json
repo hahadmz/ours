@@ -1,0 +1,16 @@
+{
+    "name": "我们",
+    "short_name": "我们",
+    "description": "木直和haha的小世界",
+    "start_url": "/ours/",
+    "display": "standalone",
+    "background_color": "#0a0a0a",
+    "theme_color": "#0a0a0a",
+    "icons": [
+        {
+            "src": "icon.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        }
+    ]
+}

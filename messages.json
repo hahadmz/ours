@@ -1,0 +1,16 @@
+{
+  "messages": [
+    {
+      "date": "2026.08.08",
+      "author": "haha",
+      "text": "daddy！谢谢你 ♥",
+      "likes": 1,
+      "comments": [
+        {"author": "haha", "text": "爱你daddy"}
+      ]
+    }
+  ],
+  "songs": [
+    {"name": "陪你度过漫长岁月", "artist": "陈奕迅", "link": "https://y.qq.com/n/ryqq/song/0039byq50YVhjP"}
+  ]
+}
