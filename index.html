@@ -205,6 +205,19 @@
         .story-view-back { text-align: center; margin-top: 32px; padding-top: 20px; border-top: 1px solid #141414; }
         .story-view-back span { font-size: 11px; color: #333; cursor: pointer; letter-spacing: 2px; transition: color 0.3s; }
         .story-view-back span:hover { color: #666; }
+
+        .ledger-summary { background: #111; border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+        .ledger-summary .ls-title { font-size: 10px; color: #555; letter-spacing: 2px; margin-bottom: 6px; }
+        .ledger-summary .ls-amount { font-size: 22px; color: #ccc; font-weight: 300; letter-spacing: 1px; }
+        .ledger-summary .ls-sub { font-size: 11px; color: #444; margin-top: 4px; }
+        .ledger-item { background: #111; border-radius: 10px; padding: 14px 16px; margin-bottom: 8px; display: flex; justify-content: space-between; align-items: center; }
+        .ledger-item-left { flex: 1; }
+        .ledger-item-use { font-size: 13px; color: #bbb; margin-bottom: 4px; }
+        .ledger-item-date { font-size: 10px; color: #444; font-family: 'Courier New', monospace; letter-spacing: 1px; }
+        .ledger-item-amt { font-size: 16px; color: #e55; font-weight: 300; letter-spacing: 1px; white-space: nowrap; margin-left: 12px; }
+        .ledger-month-tabs { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
+        .ledger-month-tab { font-size: 11px; color: #444; padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; background: #111; }
+        .ledger-month-tab.active { color: #ccc; background: #1e1e1e; }
     </style>
 </head>
 <body>
@@ -252,6 +265,7 @@
             <span class="life-tab" data-sub="sub-stories">故事</span>
             <span class="life-tab" data-sub="sub-todo">待办</span>
             <span class="life-tab" data-sub="sub-music">听歌</span>
+            <span class="life-tab" data-sub="sub-ledger">账本</span>
         </div>
         <div class="life-sub active" id="sub-msg">
             <div class="shdr">留言板<span class="cnt" id="msgCnt"></span></div>
@@ -281,6 +295,16 @@
             </div>
             <div id="songList"><div class="loading">加载中...</div></div>
             <div id="playerBox" style="margin-top:16px"></div>
+        </div>
+        <div class="life-sub" id="sub-ledger">
+            <div class="shdr">小账本<span class="cnt" id="ledgerCnt"></span></div>
+            <div class="ledger-summary" id="ledgerSummary"></div>
+            <div class="add-row" style="flex-wrap:wrap">
+                <input type="number" id="ledgerAmt" placeholder="金额" step="0.01" style="flex:1;min-width:80px">
+                <input type="text" id="ledgerUse" placeholder="用来做什么了" style="flex:2;min-width:140px">
+                <button onclick="addLedger()" style="flex-shrink:0">记一笔</button>
+            </div>
+            <div id="ledgerList"><div class="loading">加载中...</div></div>
         </div>
     </div>
 
@@ -898,7 +922,7 @@
         try {
             var result = await supabase.from('messages').select('*').order('id', { ascending: true });
             if (result.error) { console.error('loadMessages error:', result.error); return; }
-            messages = result.data || [];
+            messages = (result.data || []).filter(function(m) { return m.author !== 'ledger'; });
             renderMsgs();
         } catch(e) { console.error(e); }
     }
@@ -1090,7 +1114,7 @@
 
     /* ── 初始化数据 ── */
     async function init() {
-        await Promise.all([loadMessages(), loadTodos(), loadSongs(), loadMoods()]);
+        await Promise.all([loadMessages(), loadTodos(), loadSongs(), loadMoods(), loadLedger()]);
         checkDailyPopup();
     }
     
@@ -1140,6 +1164,110 @@
     }
 
     renderStories();
+
+    /* ── 小账本 ── */
+    var ledgerData = [];
+    var ledgerCurrentMonth = '';
+
+    async function loadLedger() {
+        if (!supabase) return;
+        try {
+            var result = await supabase.from('messages').select('*').eq('author', 'ledger').order('date', { ascending: false });
+            if (result.error) { console.error('loadLedger error:', result.error); return; }
+            ledgerData = result.data || [];
+            // 默认显示当前月
+            var now = new Date();
+            ledgerCurrentMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
+            renderLedger();
+        } catch(e) { console.error(e); }
+    }
+
+    function renderLedger() {
+        // 筛选当前月的数据
+        var filtered = ledgerData.filter(function(m) {
+            return m.date && m.date.substring(0, 7) === ledgerCurrentMonth;
+        });
+
+        // 计算月度总额
+        var total = 0;
+        filtered.forEach(function(m) {
+            try {
+                var obj = JSON.parse(m.text);
+                total += parseFloat(obj.amt) || 0;
+            } catch(e) {}
+        });
+
+        // 月份显示
+        var parts = ledgerCurrentMonth.split('-');
+        var monthLabel = parts[0] + '年' + parseInt(parts[1]) + '月';
+
+        // 更新汇总
+        document.getElementById('ledgerSummary').innerHTML =
+            '<div class="ls-title">' + monthLabel + ' 支出</div>' +
+            '<div class="ls-amount">-' + total.toFixed(2) + '</div>' +
+            '<div class="ls-sub">共 ' + filtered.length + ' 笔</div>';
+
+        // 月份切换
+        var months = {};
+        ledgerData.forEach(function(m) {
+            if (m.date) months[m.date.substring(0, 7)] = true;
+        });
+        // 确保当月也在
+        months[ledgerCurrentMonth] = true;
+        var monthKeys = Object.keys(months).sort().reverse();
+        var tabsHtml = '<div class="ledger-month-tabs">';
+        monthKeys.forEach(function(mk) {
+            var p = mk.split('-');
+            var label = p[0] + '.' + parseInt(p[1]);
+            var cls = mk === ledgerCurrentMonth ? ' active' : '';
+            tabsHtml += '<span class="ledger-month-tab' + cls + '" onclick="switchLedgerMonth(\'' + mk + '\')">' + label + '</span>';
+        });
+        tabsHtml += '</div>';
+
+        // 渲染列表
+        var html = tabsHtml;
+        filtered.forEach(function(m) {
+            try {
+                var obj = JSON.parse(m.text);
+                html += '<div class="ledger-item">';
+                html += '<div class="ledger-item-left"><div class="ledger-item-use">' + esc(obj.use) + '</div><div class="ledger-item-date">' + m.date + '</div></div>';
+                html += '<div class="ledger-item-amt">-' + parseFloat(obj.amt).toFixed(2) + '</div>';
+                html += '</div>';
+            } catch(e) {}
+        });
+
+        document.getElementById('ledgerList').innerHTML = html || '<div style="text-align:center;color:#333;font-size:13px;padding:20px 0">这个月还没有记录</div>';
+        document.getElementById('ledgerCnt').textContent = filtered.length ? filtered.length + '笔' : '';
+    }
+
+    function switchLedgerMonth(mk) {
+        ledgerCurrentMonth = mk;
+        renderLedger();
+    }
+
+    async function addLedger() {
+        if (!supabase) { alert('数据未连接'); return; }
+        var amtEl = document.getElementById('ledgerAmt');
+        var useEl = document.getElementById('ledgerUse');
+        var amt = parseFloat(amtEl.value);
+        var use = useEl.value.trim();
+        if (!amt || amt <= 0) { alert('输入金额'); return; }
+        if (!use) { alert('写一下用来做什么了'); return; }
+
+        var now = new Date();
+        var ds = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+        var entry = JSON.stringify({ amt: amt, use: use });
+
+        var result = await supabase.from('messages').insert({
+            date: ds, author: 'ledger', text: entry, likes: 0, comments: []
+        });
+
+        if (result.error) { alert('记不了，等下再试'); console.error(result.error); return; }
+
+        amtEl.value = '';
+        useEl.value = '';
+        await loadLedger();
+    }
 
     /* ── 深夜写作 ── */
     function openWriting() {
