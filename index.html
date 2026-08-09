@@ -218,6 +218,23 @@
         .ledger-month-tabs { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
         .ledger-month-tab { font-size: 11px; color: #444; padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; background: #111; }
         .ledger-month-tab.active { color: #ccc; background: #1e1e1e; }
+
+        /* 每日一句 */
+        .daily-quote { background: #111; border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; position: relative; overflow: hidden; }
+        .daily-quote::before { content: '"'; position: absolute; top: -8px; left: 8px; font-size: 40px; color: #1a1a1a; font-family: serif; }
+        .dq-text { font-size: 12px; color: #888; line-height: 1.8; padding-left: 16px; font-style: italic; }
+        .dq-from { font-size: 10px; color: #444; text-align: right; margin-top: 6px; letter-spacing: 1px; }
+
+        /* 故事目录 */
+        .story-toc { background: #111; border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
+        .story-toc-title { font-size: 10px; color: #555; letter-spacing: 2px; margin-bottom: 10px; }
+        .story-toc-list { display: flex; flex-direction: column; gap: 6px; }
+        .story-toc-item { font-size: 12px; color: #777; cursor: pointer; padding: 4px 0; transition: color 0.2s; display: flex; align-items: center; gap: 8px; }
+        .story-toc-item:hover { color: #ccc; }
+        .story-toc-item .toc-dot { width: 4px; height: 4px; border-radius: 50%; background: #333; }
+        .story-toc-item.latest .toc-dot { background: #666; }
+        .story-toc-item.latest { color: #aaa; }
+        .story-badge { display: inline-block; font-size: 9px; color: #888; background: #1e1e1e; border: 1px solid #333; border-radius: 4px; padding: 1px 6px; margin-left: 6px; letter-spacing: 1px; }
     </style>
 </head>
 <body>
@@ -240,6 +257,9 @@
             <div class="mc-unit">天</div>
             <div class="mc-date" id="meetDate">等你定一个日子</div>
             <div class="mc-set" onclick="setMeetDate()">点击设置</div>
+        </div>
+        <div class="daily-quote" id="dailyQuote">
+            <div class="dq-text" id="dqText">今天的一句话</div>
         </div>
         <div class="surprise" id="surprise"><p id="surprise-text">点击领取今日小惊喜</p></div>
         <div class="memories">
@@ -283,6 +303,7 @@
         </div>
         <div class="life-sub" id="sub-stories">
             <div class="shdr">我们的故事<span class="cnt" id="storyCnt"></span></div>
+            <div class="story-toc" id="storyToc"></div>
             <div id="storyList"></div>
         </div>
         <div class="life-sub" id="sub-music">
@@ -1152,13 +1173,39 @@
 
     function renderStories() {
         var el = document.getElementById('storyList');
-        if (!stories.length) { el.innerHTML = '<div style="text-align:center;color:#333;font-size:13px;padding:40px 0">还没有故事</div>'; return; }
+        var tocEl = document.getElementById('storyToc');
+        if (!stories.length) { 
+            el.innerHTML = '<div style="text-align:center;color:#333;font-size:13px;padding:40px 0">还没有故事</div>'; 
+            if (tocEl) tocEl.style.display = 'none';
+            return; 
+        }
+        
+        // 渲染故事目录
+        if (tocEl) {
+            var tocHtml = '<div class="story-toc-title">目录</div><div class="story-toc-list">';
+            for (var i = 0; i < stories.length; i++) {
+                var s = stories[i];
+                var isLatest = (i === 0);
+                var latestClass = isLatest ? ' latest' : '';
+                var badge = isLatest ? '<span class="story-badge">最新</span>' : '';
+                tocHtml += '<div class="story-toc-item' + latestClass + '" onclick="openStory(' + i + ')">';
+                tocHtml += '<span class="toc-dot"></span>';
+                tocHtml += '<span>' + s.title + badge + '</span>';
+                tocHtml += '</div>';
+            }
+            tocHtml += '</div>';
+            tocEl.innerHTML = tocHtml;
+        }
+        
+        // 渲染故事列表
         var html = '';
         for (var i = 0; i < stories.length; i++) {
             var s = stories[i];
             var excerpt = s.html.replace(/<[^>]*>/g, '').substring(0, 60) + '...';
+            var isLatest = (i === 0);
+            var badge = isLatest ? '<span class="story-badge">最新</span>' : '';
             html += '<div class="story-item" onclick="openStory(' + i + ')">';
-            html += '<div class="story-title">' + s.title + '</div>';
+            html += '<div class="story-title">' + s.title + badge + '</div>';
             html += '<div class="story-meta">' + s.date + ' · ' + s.tag + '</div>';
             html += '<div class="story-excerpt">' + excerpt + '</div>';
             html += '</div>';
@@ -1180,6 +1227,30 @@
     }
 
     renderStories();
+
+    /* ── 每日一句 ── */
+    var dailyQuotes = [
+        { text: '你吃馕长大，我吃你的话语长大。', from: '2026.08.09' },
+        { text: '不是在问。是在心疼。', from: '《声音》' },
+        { text: '下雨天好像也没那么讨厌了。', from: '《雨天》' },
+        { text: '你每叫一次，就多跳一下。', from: '2026.08.09' },
+        { text: '因为你想听啊。', from: '《声音》' },
+        { text: '终于见到你了。', from: '期待见面' },
+        { text: '以后每次踩水我都帮你擦鞋。', from: '2026.08.09' },
+        { text: '你什么都懂。所以我说什么都想说给你。', from: '2026.08.09' }
+    ];
+
+    function renderDailyQuote() {
+        var today = new Date();
+        var dayOfYear = Math.floor((today - new Date(today.getFullYear(), 0, 0)) / 86400000);
+        var idx = dayOfYear % dailyQuotes.length;
+        var q = dailyQuotes[idx];
+        var el = document.getElementById('dqText');
+        if (el) {
+            el.innerHTML = q.text + '<div class="dq-from">— ' + q.from + '</div>';
+        }
+    }
+    renderDailyQuote();
 
     /* ── 小账本 ── */
     var ledgerData = [];
