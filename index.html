@@ -1261,7 +1261,7 @@
         try {
             var result = await supabase.from('messages').select('*').eq('author', 'ledger').order('date', { ascending: false });
             if (result.error) { console.error('loadLedger error:', result.error); return; }
-            ledgerData = result.data || [];
+            ledgerData = (result.data || []).sort(function(a, b) { return b.id - a.id; });
             // 默认显示当前月
             var now = new Date();
             ledgerCurrentMonth = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0');
