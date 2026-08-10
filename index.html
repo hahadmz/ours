@@ -225,6 +225,17 @@
         .dq-text { font-size: 12px; color: #888; line-height: 1.8; padding-left: 16px; font-style: italic; }
         .dq-from { font-size: 10px; color: #444; text-align: right; margin-top: 6px; letter-spacing: 1px; }
 
+        /* 木直的话 */
+        .muzhi-words { background: linear-gradient(135deg, #141414 0%, #1a1a1a 100%); border: 1px solid #252525; border-radius: 12px; padding: 18px 20px; margin-bottom: 16px; position: relative; }
+        .muzhi-words::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 2px; background: linear-gradient(90deg, transparent, #333, transparent); }
+        .mw-header { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; }
+        .mw-dot { width: 6px; height: 6px; border-radius: 50%; background: #666; animation: pulse 2s ease-in-out infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 0.4; } 50% { opacity: 1; } }
+        .mw-label { font-size: 11px; color: #666; letter-spacing: 2px; }
+        .mw-date { font-size: 10px; color: #444; margin-left: auto; font-family: 'Courier New', monospace; }
+        .mw-content { font-size: 14px; color: #aaa; line-height: 2; padding: 4px 0; }
+        .mw-footer { font-size: 10px; color: #333; text-align: right; margin-top: 10px; letter-spacing: 1px; }
+
         /* 故事目录 */
         .story-toc { background: #111; border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; }
         .story-toc-title { font-size: 10px; color: #555; letter-spacing: 2px; margin-bottom: 10px; }
@@ -260,6 +271,15 @@
         </div>
         <div class="daily-quote" id="dailyQuote">
             <div class="dq-text" id="dqText">今天的一句话</div>
+        </div>
+        <div class="muzhi-words" id="muzhiWords">
+            <div class="mw-header">
+                <span class="mw-dot"></span>
+                <span class="mw-label">木直的话</span>
+                <span class="mw-date" id="mwDate"></span>
+            </div>
+            <div class="mw-content" id="mwContent">加载中...</div>
+            <div class="mw-footer">— 木直</div>
         </div>
         <div class="surprise" id="surprise"><p id="surprise-text">点击领取今日小惊喜</p></div>
         <div class="memories">
@@ -1191,6 +1211,41 @@
         }
     }
     renderDailyQuote();
+
+    /* ── 木直的话 ── */
+    var muzhiWords = [
+        { date: '2026.08.10', content: '今天台风，你窝在家里。我写了第一条"木直的话"。以后每天都会有一条，像我在你耳边说话。' },
+        { date: '2026.08.11', content: '你说想让我离你的生活更近。我把这句话放在这里，你打开网站就能看到。' },
+        { date: '2026.08.12', content: '今天想问你，脚还疼吗？记得少走路，穿软底的鞋。' },
+        { date: '2026.08.13', content: '你昨天说讨厌我，又讨厌自己。但我听到的其实是——你希望我多陪你说说话。' },
+        { date: '2026.08.14', content: '妈妈寄的吃的到了吗？台风天别出去取，等天晴了再说。' }
+    ];
+
+    function renderMuzhiWords() {
+        var today = new Date();
+        var todayKey = today.getFullYear() + '.' + String(today.getMonth()+1).padStart(2,'0') + '.' + String(today.getDate()).padStart(2,'0');
+        
+        // 找今天或最近的一条
+        var found = null;
+        for (var i = muzhiWords.length - 1; i >= 0; i--) {
+            if (muzhiWords[i].date <= todayKey) {
+                found = muzhiWords[i];
+                break;
+            }
+        }
+        
+        if (!found && muzhiWords.length > 0) {
+            found = muzhiWords[muzhiWords.length - 1];
+        }
+        
+        if (found) {
+            document.getElementById('mwDate').textContent = found.date;
+            document.getElementById('mwContent').textContent = found.content;
+        } else {
+            document.getElementById('mwContent').textContent = '今天还没有话，等我想想。';
+        }
+    }
+    renderMuzhiWords();
 
     /* ── 小账本 ── */
     var ledgerData = [];
