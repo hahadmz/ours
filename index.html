@@ -240,6 +240,10 @@
         .wish-item-meta .wish-by { color: #555; }
         .wish-del { color: #333; cursor: pointer; font-size: 16px; padding: 2px 6px; }
         .wish-del:hover { color: #666; }
+        .wish-who { display: flex; align-items: center; gap: 8px; margin-bottom: 14px; }
+        .wish-who-label { font-size: 11px; color: #444; letter-spacing: 1px; margin-right: 2px; }
+        .wish-who-opt { font-size: 11px; color: #555; padding: 4px 12px; border-radius: 6px; background: #111; cursor: pointer; transition: all 0.2s; }
+        .wish-who-opt.active { color: #ccc; background: #1e1e1e; }
 
         /* 每日一句 */
         .daily-quote { background: #111; border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; position: relative; overflow: hidden; }
@@ -382,6 +386,11 @@
             <div class="todo-input" style="margin-bottom:14px">
                 <input type="text" id="wishIn" placeholder="许个愿，写在这里..." style="flex:1">
                 <button onclick="addWish()" style="flex-shrink:0">存入</button>
+            </div>
+            <div class="wish-who">
+                <span class="wish-who-label">谁许的</span>
+                <span class="wish-who-opt active" data-who="haha" onclick="setWishWho('haha')">haha</span>
+                <span class="wish-who-opt" data-who="muzhi" onclick="setWishWho('muzhi')">木直</span>
             </div>
             <div id="wishList"><div class="loading">加载中...</div></div>
         </div>
@@ -1440,6 +1449,14 @@
 
     /* ── 愿望银行 ── */
     var wishData = [];
+    var wishWho = 'haha';
+
+    function setWishWho(who) {
+        wishWho = who;
+        document.querySelectorAll('.wish-who-opt').forEach(function(el) {
+            el.classList.toggle('active', el.getAttribute('data-who') === who);
+        });
+    }
 
     async function loadWishes() {
         if (!supabase) return;
@@ -1491,7 +1508,7 @@
         if (!v) { alert('写个愿望吧'); return; }
         var now = new Date();
         var ds = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
-        var entry = JSON.stringify({ wish: v, by: 'haha', status: 'pending' });
+        var entry = JSON.stringify({ wish: v, by: wishWho, status: 'pending' });
         var result = await supabase.from('messages').insert({
             date: ds, author: 'wish', text: entry, likes: 0, comments: []
         });
