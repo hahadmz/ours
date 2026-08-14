@@ -90,8 +90,9 @@
         .thought-date { font-size: 10px; color: #444; margin-bottom: 6px; font-family: 'Courier New', monospace; }
         .thought-body { font-size: 13px; color: #aaa; line-height: 1.9; white-space: pre-wrap; }
         .thought-tag { display: inline-block; font-size: 10px; color: #555; background: #1a1a1a; border-radius: 4px; padding: 2px 8px; margin-top: 8px; }
-        .life-tabs { display: flex; gap: 4px; margin-bottom: 16px; padding: 3px; background: #111; border-radius: 10px; }
-        .life-tab { flex: 1; text-align: center; padding: 8px 0; font-size: 12px; color: #555; letter-spacing: 1px; border-radius: 8px; cursor: pointer; transition: all 0.25s; }
+        .life-tabs { display: flex; gap: 4px; margin-bottom: 16px; padding: 3px; background: #111; border-radius: 10px; overflow-x: auto; -webkit-overflow-scrolling: touch; scrollbar-width: none; }
+        .life-tabs::-webkit-scrollbar { display: none; }
+        .life-tab { flex: 0 0 auto; text-align: center; padding: 8px 14px; font-size: 12px; color: #555; letter-spacing: 1px; border-radius: 8px; cursor: pointer; transition: all 0.25s; white-space: nowrap; }
         .life-tab.active { background: #1e1e1e; color: #ccc; }
         .life-sub { display: none; }
         .life-sub.active { display: block; animation: fi 0.2s ease; }
@@ -223,6 +224,22 @@
         .ledger-month-tabs { display: flex; gap: 4px; margin-bottom: 12px; flex-wrap: wrap; }
         .ledger-month-tab { font-size: 11px; color: #444; padding: 4px 10px; border-radius: 6px; cursor: pointer; transition: all 0.2s; background: #111; }
         .ledger-month-tab.active { color: #ccc; background: #1e1e1e; }
+        .wish-summary { background: #111; border-radius: 10px; padding: 14px 16px; margin-bottom: 14px; }
+        .wish-summary .ws-title { font-size: 10px; color: #555; letter-spacing: 2px; margin-bottom: 6px; }
+        .wish-summary .ws-count { font-size: 22px; color: #ccc; font-weight: 300; letter-spacing: 1px; }
+        .wish-summary .ws-sub { font-size: 11px; color: #444; margin-top: 4px; }
+        .wish-item { background: #111; border-radius: 10px; padding: 14px 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
+        .wish-item.done { opacity: 0.45; }
+        .wish-item .wish-check { width: 20px; height: 20px; border: 1.5px solid #333; border-radius: 50%; cursor: pointer; flex-shrink: 0; position: relative; }
+        .wish-item.done .wish-check { border-color: #5a5a5a; background: #222; }
+        .wish-item.done .wish-check::after { content: '✓'; position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); color: #888; font-size: 12px; }
+        .wish-item-main { flex: 1; }
+        .wish-item-text { font-size: 13px; color: #bbb; margin-bottom: 4px; }
+        .wish-item.done .wish-item-text { color: #444; text-decoration: line-through; }
+        .wish-item-meta { font-size: 10px; color: #444; letter-spacing: 1px; }
+        .wish-item-meta .wish-by { color: #555; }
+        .wish-del { color: #333; cursor: pointer; font-size: 16px; padding: 2px 6px; }
+        .wish-del:hover { color: #666; }
 
         /* 每日一句 */
         .daily-quote { background: #111; border-radius: 10px; padding: 14px 16px; margin-bottom: 16px; position: relative; overflow: hidden; }
@@ -317,6 +334,7 @@
             <span class="life-tab" data-sub="sub-todo">待办</span>
             <span class="life-tab" data-sub="sub-music">听歌</span>
             <span class="life-tab" data-sub="sub-ledger">账本</span>
+            <span class="life-tab" data-sub="sub-wish">愿望</span>
         </div>
         <div class="life-sub active" id="sub-msg">
             <div class="shdr">留言板<span class="cnt" id="msgCnt"></span></div>
@@ -357,6 +375,15 @@
                 <button onclick="addLedger()" style="flex-shrink:0">记一笔</button>
             </div>
             <div id="ledgerList"><div class="loading">加载中...</div></div>
+        </div>
+        <div class="life-sub" id="sub-wish">
+            <div class="shdr">愿望银行<span class="cnt" id="wishCnt"></span></div>
+            <div class="wish-summary" id="wishSummary"></div>
+            <div class="todo-input" style="margin-bottom:14px">
+                <input type="text" id="wishIn" placeholder="许个愿，写在这里..." style="flex:1">
+                <button onclick="addWish()" style="flex-shrink:0">存入</button>
+            </div>
+            <div id="wishList"><div class="loading">加载中...</div></div>
         </div>
     </div>
 
@@ -1139,7 +1166,7 @@
 
     /* ── 初始化数据 ── */
     async function init() {
-        await Promise.all([loadMessages(), loadTodos(), loadSongs(), loadMoods(), loadLedger()]);
+        await Promise.all([loadMessages(), loadTodos(), loadSongs(), loadMoods(), loadLedger(), loadWishes()]);
         checkDailyPopup();
     }
     
@@ -1410,6 +1437,83 @@
         useEl.value = '';
         await loadLedger();
     }
+
+    /* ── 愿望银行 ── */
+    var wishData = [];
+
+    async function loadWishes() {
+        if (!supabase) return;
+        try {
+            var result = await supabase.from('messages').select('*').eq('author', 'wish').order('id', { ascending: false });
+            if (result.error) { console.error('loadWishes error:', result.error); return; }
+            wishData = result.data || [];
+            renderWishes();
+        } catch(e) { console.error(e); }
+    }
+
+    function wishBy(m) {
+        try { var obj = JSON.parse(m.text); return obj; } catch(e) { return { wish: m.text || '', by: m.author || '', status: 'pending' }; }
+    }
+
+    function renderWishes() {
+        var pending = wishData.filter(function(m) { return wishBy(m).status !== 'done'; });
+        var done = wishData.filter(function(m) { return wishBy(m).status === 'done'; });
+        var list = pending.concat(done);
+
+        var html = '';
+        for (var i = 0; i < list.length; i++) {
+            var m = list[i];
+            var obj = wishBy(m);
+            var isDone = obj.status === 'done';
+            var byLabel = obj.by === 'haha' ? 'haha许的' : (obj.by === 'muzhi' ? '木直许的' : '');
+            var dateLabel = m.date ? m.date.substring(5) : '';
+            html += '<div class="wish-item' + (isDone ? ' done' : '') + '">';
+            html += '<div class="wish-check" onclick="toggleWish(' + m.id + ')"></div>';
+            html += '<div class="wish-item-main">';
+            html += '<div class="wish-item-text">' + esc(obj.wish) + '</div>';
+            html += '<div class="wish-item-meta">' + byLabel + (dateLabel ? ' · ' + dateLabel : '') + (isDone ? ' · 已兑现' : ' · 待兑现') + '</div>';
+            html += '</div>';
+            html += '<span class="wish-del" onclick="delWish(' + m.id + ')">&times;</span>';
+            html += '</div>';
+        }
+        document.getElementById('wishList').innerHTML = html || '<div style="text-align:center;color:#333;font-size:13px;padding:20px 0">还没有愿望，许一个吧</div>';
+        document.getElementById('wishCnt').textContent = pending.length ? pending.length + '个待兑现' : '';
+        document.getElementById('wishSummary').innerHTML =
+            '<div class="ws-title">愿望银行</div>' +
+            '<div class="ws-count">' + pending.length + '</div>' +
+            '<div class="ws-sub">个愿望等着兑现 · 已兑现 ' + done.length + ' 个</div>';
+    }
+
+    async function addWish() {
+        if (!supabase) { alert('数据未连接'); return; }
+        var inp = document.getElementById('wishIn');
+        var v = inp.value.trim();
+        if (!v) { alert('写个愿望吧'); return; }
+        var now = new Date();
+        var ds = now.getFullYear() + '-' + String(now.getMonth() + 1).padStart(2, '0') + '-' + String(now.getDate()).padStart(2, '0');
+        var entry = JSON.stringify({ wish: v, by: 'haha', status: 'pending' });
+        var result = await supabase.from('messages').insert({
+            date: ds, author: 'wish', text: entry, likes: 0, comments: []
+        });
+        if (result.error) { alert('存不了，等下再试'); console.error(result.error); return; }
+        inp.value = '';
+        await loadWishes();
+    }
+
+    async function toggleWish(id) {
+        var m = wishData.find(function(x) { return x.id === id; });
+        if (!m) return;
+        var obj = wishBy(m);
+        obj.status = obj.status === 'done' ? 'pending' : 'done';
+        await supabase.from('messages').update({ text: JSON.stringify(obj) }).eq('id', id);
+        await loadWishes();
+    }
+
+    async function delWish(id) {
+        await supabase.from('messages').delete().eq('id', id);
+        await loadWishes();
+    }
+    document.getElementById('wishIn').addEventListener('keydown', function(e) { if (e.key === 'Enter') addWish(); });
 
     /* ── 深夜写作 ── */
 
