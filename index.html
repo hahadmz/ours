@@ -33,7 +33,12 @@
         .mem-item { display: flex; align-items: baseline; gap: 14px; padding: 10px 0; border-bottom: 1px solid #141414; }
         .mem-item .d { font-size: 11px; color: #555; font-family: 'Courier New', monospace; flex-shrink: 0; }
         .mem-item .t { font-size: 13px; color: #999; }
-        .msg-card { background: #141414; border: 1px solid #1e1e1e; border-radius: 12px; padding: 16px 18px; margin-bottom: 10px; }
+        .msg-card { background: #141414; border: 1px solid #1e1e1e; border-radius: 12px; padding: 16px 18px; margin-bottom: 10px; border-left: 3px solid transparent; }
+        .msg-card.msg-by-haha { border-left-color: #e87ea5; }
+        .msg-card.msg-by-muzhi { border-left-color: #6fb7d8; }
+        .msg-card .msg-author { font-size: 10px; color: #666; margin-left: 6px; }
+        .msg-card.msg-by-haha .msg-author { color: #9c6a7d; }
+        .msg-card.msg-by-muzhi .msg-author { color: #5f7f96; }
         .msg-date { font-size: 10px; color: #444; margin-bottom: 5px; font-family: 'Courier New', monospace; }
         .msg-body { font-size: 14px; color: #aaa; line-height: 1.8; white-space: pre-wrap; }
         .surprise { background: #141414; border: 1px solid #1e1e1e; border-radius: 12px; padding: 16px; margin: 16px 0; text-align: center; cursor: pointer; transition: border-color 0.3s; }
@@ -346,7 +351,12 @@
         </div>
         <div class="life-sub active" id="sub-msg">
             <div class="shdr">留言板<span class="cnt" id="msgCnt"></span></div>
-            <div class="todo-input" style="margin-bottom:14px"><input type="text" id="msgIn" placeholder="给木直写点什么..." style="flex:1"><button onclick="addMsg()" style="flex-shrink:0">发送</button></div>
+            <div class="todo-input" style="margin-bottom:14px"><input type="text" id="msgIn" placeholder="写点什么..." style="flex:1"><button onclick="addMsg()" style="flex-shrink:0">发送</button></div>
+            <div class="wish-who" id="msgWhoRow">
+                <span class="wish-who-label">谁写的</span>
+                <span class="wish-who-opt active" data-who="haha" onclick="setMsgWho('haha')">haha</span>
+                <span class="wish-who-opt" data-who="muzhi" onclick="setMsgWho('muzhi')">木直</span>
+            </div>
             <div id="msgList"><div class="loading">加载中...</div></div>
         </div>
         <div class="life-sub" id="sub-thoughts">
@@ -391,7 +401,7 @@
                 <input type="text" id="wishIn" placeholder="许个愿，写在这里..." style="flex:1">
                 <button onclick="addWish()" style="flex-shrink:0">存入</button>
             </div>
-            <div class="wish-who">
+            <div class="wish-who" id="wishWhoRow">
                 <span class="wish-who-label">谁许的</span>
                 <span class="wish-who-opt active" data-who="haha" onclick="setWishWho('haha')">haha</span>
                 <span class="wish-who-opt" data-who="muzhi" onclick="setWishWho('muzhi')">木直</span>
@@ -983,6 +993,13 @@
     }
 
     /* ── 留言板 ── */
+    var msgWho = 'haha';
+    function setMsgWho(who) {
+        msgWho = who;
+        document.getElementById('msgWhoRow').querySelectorAll('.wish-who-opt').forEach(function(el) {
+            el.classList.toggle('active', el.getAttribute('data-who') === who);
+        });
+    }
     async function loadMessages() {
         try {
             var result = await supabase.from('messages').select('*').order('id', { ascending: true });
@@ -1000,8 +1017,8 @@
             var liked = userLiked[key] ? ' liked' : '';
             var likeCount = m.likes || 0;
             var cmts = m.comments || [];
-            var authorTag = m.author ? '<span style="font-size:11px;color:#666;margin-left:8px">' + esc(m.author) + '</span>' : '';
-            html += '<div class="msg-card"><div class="msg-date">' + m.date + authorTag + '</div><div class="msg-body">' + esc(m.text).replace(/\n/g, '<br>') + '</div>';
+            var authorTag = m.author === 'muzhi' ? '<span class="msg-author">木直</span>' : (m.author ? '<span class="msg-author">haha</span>' : '');
+            html += '<div class="msg-card' + (m.author === 'muzhi' ? ' msg-by-muzhi' : ' msg-by-haha') + '"><div class="msg-date">' + m.date + authorTag + '</div><div class="msg-body">' + esc(m.text).replace(/\n/g, '<br>') + '</div>';
             html += '<div class="note-actions">';
             html += '<span class="note-like' + liked + '" onclick="toggleMsgLike(' + m.id + ')"><span class="heart">&#9825;</span>' + likeCount + '</span>';
             html += '<span class="note-cmt-btn" onclick="toggleMsgCmts(' + m.id + ')">评论 ' + (cmts.length ? '(' + cmts.length + ')' : '') + '</span>';
@@ -1044,7 +1061,7 @@
         var msg = messages.find(function(m) { return m.id === id; });
         if (!msg) return;
         var cmts = msg.comments || [];
-        cmts.push({ author: 'haha', text: v });
+        cmts.push({ author: msgWho, text: v });
         await supabase.from('messages').update({ comments: cmts }).eq('id', id);
         await loadMessages();
     }
@@ -1056,7 +1073,7 @@
         var today = new Date();
         var ds = today.getFullYear() + '.' + String(today.getMonth()+1).padStart(2,'0') + '.' + String(today.getDate()).padStart(2,'0');
         var result = await supabase.from('messages').insert({
-            date: ds, author: 'haha', text: v, likes: 0, comments: []
+            date: ds, author: msgWho, text: v, likes: 0, comments: []
         });
         if (result.error) { toast('发送失败'); console.error(result.error); return; }
         inp.value = '';
@@ -1457,7 +1474,7 @@
 
     function setWishWho(who) {
         wishWho = who;
-        document.querySelectorAll('.wish-who-opt').forEach(function(el) {
+        document.getElementById('wishWhoRow').querySelectorAll('.wish-who-opt').forEach(function(el) {
             el.classList.toggle('active', el.getAttribute('data-who') === who);
         });
     }
