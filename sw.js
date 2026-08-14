@@ -1,28 +1,42 @@
-const CACHE_NAME = 'ours-v1';
+const CACHE_NAME = 'ours-v2';
 const urlsToCache = [
-    '/',
-    '/ours/',
-    '/ours/index.html',
-    '/ours/style.css',
-    '/ours/script.js',
-    '/ours/manifest.json'
+    './',
+    './index.html',
+    './style.css',
+    './script.js',
+    './manifest.json'
 ];
 
 self.addEventListener('install', event => {
     event.waitUntil(
         caches.open(CACHE_NAME)
             .then(cache => cache.addAll(urlsToCache))
+            .then(() => self.skipWaiting())
+    );
+});
+
+self.addEventListener('activate', event => {
+    event.waitUntil(
+        caches.keys()
+            .then(keys => Promise.all(
+                keys.filter(key => key !== CACHE_NAME)
+                    .map(key => caches.delete(key))
+            ))
+            .then(() => self.clients.claim())
     );
 });
 
 self.addEventListener('fetch', event => {
+    if (event.request.method !== 'GET') return;
     event.respondWith(
-        caches.match(event.request)
+        fetch(event.request)
             .then(response => {
-                if (response) {
-                    return response;
-                }
-                return fetch(event.request);
+                const clone = response.clone();
+                caches.open(CACHE_NAME).then(cache => {
+                    cache.put(event.request, clone);
+                });
+                return response;
             })
+            .catch(() => caches.match(event.request))
     );
 });
