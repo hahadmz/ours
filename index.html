@@ -99,6 +99,12 @@
         .life-tabs::-webkit-scrollbar { display: none; }
         .life-tab { flex: 0 0 auto; text-align: center; padding: 8px 14px; font-size: 12px; color: #555; letter-spacing: 1px; border-radius: 8px; cursor: pointer; transition: all 0.25s; white-space: nowrap; }
         .life-tab.active { background: #1e1e1e; color: #ccc; }
+        .mini-tabs { display: flex; gap: 4px; margin-bottom: 14px; overflow-x: auto; scrollbar-width: none; }
+        .mini-tabs::-webkit-scrollbar { display: none; }
+        .mini-tab { flex: 0 0 auto; text-align: center; padding: 6px 12px; font-size: 11px; color: #555; letter-spacing: 1px; border-radius: 6px; background: #111; cursor: pointer; transition: all 0.25s; white-space: nowrap; }
+        .mini-tab.active { background: #1e1e1e; color: #ccc; }
+        .mini-panel { display: none; }
+        .mini-panel.active { display: block; }
         .life-sub { display: none; }
         .life-sub.active { display: block; animation: fi 0.2s ease; }
         .note-actions { display: flex; align-items: center; gap: 14px; margin-top: 10px; padding-top: 8px; border-top: 1px solid #1a1a1a; }
@@ -340,38 +346,58 @@
 
     <!-- 生活（留言/想法/待办/相册/听歌） -->
     <div class="page" id="p-life">
-        <div class="life-tabs">
-            <span class="life-tab active" data-sub="sub-msg">留言</span>
-            <span class="life-tab" data-sub="sub-thoughts">想法</span>
-            <span class="life-tab" data-sub="sub-stories">故事</span>
-            <span class="life-tab" data-sub="sub-todo">待办</span>
+                <div class="life-tabs">
+            <span class="life-tab active" data-sub="group-text">文字</span>
+            <span class="life-tab" data-sub="group-daily">日常</span>
             <span class="life-tab" data-sub="sub-music">听歌</span>
-            <span class="life-tab" data-sub="sub-ledger">账本</span>
             <span class="life-tab" data-sub="sub-wish">愿望</span>
         </div>
-        <div class="life-sub active" id="sub-msg">
-            <div class="shdr">留言板<span class="cnt" id="msgCnt"></span></div>
-            <div class="todo-input" style="margin-bottom:14px"><input type="text" id="msgIn" placeholder="写点什么..." style="flex:1"><button onclick="addMsg()" style="flex-shrink:0">发送</button></div>
-            <div class="wish-who" id="msgWhoRow">
-                <span class="wish-who-label">谁写的</span>
-                <span class="wish-who-opt active" data-who="haha" onclick="setMsgWho('haha')">haha</span>
-                <span class="wish-who-opt" data-who="muzhi" onclick="setMsgWho('muzhi')">木直</span>
+        <div class="life-sub active" id="group-text">
+            <div class="mini-tabs">
+                <span class="mini-tab active" data-mini="mini-msg">留言</span>
+                <span class="mini-tab" data-mini="mini-thoughts">想法</span>
+                <span class="mini-tab" data-mini="mini-stories">故事</span>
             </div>
-            <div id="msgList"><div class="loading">加载中...</div></div>
+            <div class="mini-panel active" id="mini-msg">
+                <div class="shdr">留言板<span class="cnt" id="msgCnt"></span></div>
+                <div class="todo-input" style="margin-bottom:14px"><input type="text" id="msgIn" placeholder="写点什么..." style="flex:1"><button onclick="addMsg()" style="flex-shrink:0">发送</button></div>
+                <div class="wish-who" id="msgWhoRow">
+                    <span class="wish-who-label">谁写的</span>
+                    <span class="wish-who-opt active" data-who="haha" onclick="setMsgWho('haha')">haha</span>
+                    <span class="wish-who-opt" data-who="muzhi" onclick="setMsgWho('muzhi')">木直</span>
+                </div>
+                <div id="msgList"><div class="loading">加载中...</div></div>
+            </div>
+            <div class="mini-panel" id="mini-thoughts">
+                <div class="shdr">木直的想法<span class="cnt" id="thoughtCnt"></span></div>
+                <div id="thoughtList"></div>
+            </div>
+            <div class="mini-panel" id="mini-stories">
+                <div class="shdr">我们的故事<span class="cnt" id="storyCnt"></span></div>
+                <div class="story-toc" id="storyToc"></div>
+                <div id="storyList"></div>
+            </div>
         </div>
-        <div class="life-sub" id="sub-thoughts">
-            <div class="shdr">木直的想法<span class="cnt" id="thoughtCnt"></span></div>
-            <div id="thoughtList"></div>
-        </div>
-        <div class="life-sub" id="sub-todo">
-            <div class="shdr">每日待办<span class="cnt" id="todoCnt"></span></div>
-            <div class="todo-input"><input type="text" id="todoIn" placeholder="写一件要做的事"><button onclick="addTodo()">添加</button></div>
-            <div id="todoList"><div class="loading">加载中...</div></div>
-        </div>
-        <div class="life-sub" id="sub-stories">
-            <div class="shdr">我们的故事<span class="cnt" id="storyCnt"></span></div>
-            <div class="story-toc" id="storyToc"></div>
-            <div id="storyList"></div>
+        <div class="life-sub" id="group-daily">
+            <div class="mini-tabs">
+                <span class="mini-tab active" data-mini="mini-todo">待办</span>
+                <span class="mini-tab" data-mini="mini-ledger">账本</span>
+            </div>
+            <div class="mini-panel active" id="mini-todo">
+                <div class="shdr">每日待办<span class="cnt" id="todoCnt"></span></div>
+                <div class="todo-input"><input type="text" id="todoIn" placeholder="写一件要做的事"><button onclick="addTodo()">添加</button></div>
+                <div id="todoList"><div class="loading">加载中...</div></div>
+            </div>
+            <div class="mini-panel" id="mini-ledger">
+                <div class="shdr">小账本<span class="cnt" id="ledgerCnt"></span></div>
+                <div class="ledger-summary" id="ledgerSummary"></div>
+                <div class="add-row" style="flex-wrap:wrap">
+                    <input type="number" id="ledgerAmt" placeholder="金额" step="0.01" style="flex:1;min-width:80px">
+                    <input type="text" id="ledgerUse" placeholder="用来做什么了" style="flex:2;min-width:140px">
+                    <button onclick="addLedger()" style="flex-shrink:0">记一笔</button>
+                </div>
+                <div id="ledgerList"><div class="loading">加载中...</div></div>
+            </div>
         </div>
         <div class="life-sub" id="sub-music">
             <div class="shdr">一起听歌<span class="cnt" id="musicCnt"></span></div>
@@ -383,16 +409,6 @@
             </div>
             <div id="songList"><div class="loading">加载中...</div></div>
             <div id="playerBox" style="margin-top:16px"></div>
-        </div>
-        <div class="life-sub" id="sub-ledger">
-            <div class="shdr">小账本<span class="cnt" id="ledgerCnt"></span></div>
-            <div class="ledger-summary" id="ledgerSummary"></div>
-            <div class="add-row" style="flex-wrap:wrap">
-                <input type="number" id="ledgerAmt" placeholder="金额" step="0.01" style="flex:1;min-width:80px">
-                <input type="text" id="ledgerUse" placeholder="用来做什么了" style="flex:2;min-width:140px">
-                <button onclick="addLedger()" style="flex-shrink:0">记一笔</button>
-            </div>
-            <div id="ledgerList"><div class="loading">加载中...</div></div>
         </div>
         <div class="life-sub" id="sub-wish">
             <div class="shdr">愿望银行<span class="cnt" id="wishCnt"></span></div>
@@ -615,6 +631,18 @@
             tab.classList.add('active');
             document.querySelectorAll('.life-sub').forEach(function(s) { s.classList.remove('active'); });
             document.getElementById(tab.getAttribute('data-sub')).classList.add('active');
+        });
+    });
+
+    /* ── 文字/日常分组内子tab ── */
+    var miniTabs = document.querySelectorAll('.mini-tab');
+    miniTabs.forEach(function(tab) {
+        tab.addEventListener('click', function() {
+            var group = tab.closest('.life-sub');
+            group.querySelectorAll('.mini-tab').forEach(function(t) { t.classList.remove('active'); });
+            tab.classList.add('active');
+            group.querySelectorAll('.mini-panel').forEach(function(p) { p.classList.remove('active'); });
+            document.getElementById(tab.getAttribute('data-mini')).classList.add('active');
         });
     });
 
