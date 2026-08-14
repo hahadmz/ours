@@ -228,7 +228,11 @@
         .wish-summary .ws-title { font-size: 10px; color: #555; letter-spacing: 2px; margin-bottom: 6px; }
         .wish-summary .ws-count { font-size: 22px; color: #ccc; font-weight: 300; letter-spacing: 1px; }
         .wish-summary .ws-sub { font-size: 11px; color: #444; margin-top: 4px; }
-        .wish-item { background: #111; border-radius: 10px; padding: 14px 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; }
+        .wish-item { background: #111; border-radius: 10px; padding: 14px 16px; margin-bottom: 8px; display: flex; align-items: center; gap: 12px; border-left: 3px solid transparent; }
+        .wish-item.wish-by-haha { border-left-color: #e87ea5; }
+        .wish-item.wish-by-muzhi { border-left-color: #6fb7d8; }
+        .wish-item.wish-by-haha .wish-item-meta { color: #9c6a7d; }
+        .wish-item.wish-by-muzhi .wish-item-meta { color: #5f7f96; }
         .wish-item.done { opacity: 0.45; }
         .wish-item .wish-check { width: 20px; height: 20px; border: 1.5px solid #333; border-radius: 50%; cursor: pointer; flex-shrink: 0; position: relative; }
         .wish-item.done .wish-check { border-color: #5a5a5a; background: #222; }
@@ -1484,7 +1488,7 @@
             var isDone = obj.status === 'done';
             var byLabel = obj.by === 'haha' ? 'haha许的' : (obj.by === 'muzhi' ? '木直许的' : '');
             var dateLabel = m.date ? m.date.substring(5) : '';
-            html += '<div class="wish-item' + (isDone ? ' done' : '') + '">';
+            html += '<div class="wish-item' + (isDone ? ' done' : '') + (obj.by === 'haha' ? ' wish-by-haha' : obj.by === 'muzhi' ? ' wish-by-muzhi' : '') + '">';
             html += '<div class="wish-check" onclick="toggleWish(' + m.id + ')"></div>';
             html += '<div class="wish-item-main">';
             html += '<div class="wish-item-text">' + esc(obj.wish) + '</div>';
