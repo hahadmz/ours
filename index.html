@@ -375,15 +375,10 @@
         </div>
         <div class="life-sub" id="group-daily">
             <div class="mini-tabs">
-                <span class="mini-tab active" data-mini="mini-todo">待办</span>
-                <span class="mini-tab" data-mini="mini-ledger">账本</span>
+                <span class="mini-tab active" data-mini="mini-ledger">账本</span>
+                <span class="mini-tab" data-mini="mini-todo">待办</span>
             </div>
-            <div class="mini-panel active" id="mini-todo">
-                <div class="shdr">每日待办<span class="cnt" id="todoCnt"></span></div>
-                <div class="todo-input"><input type="text" id="todoIn" placeholder="写一件要做的事"><button onclick="addTodo()">添加</button></div>
-                <div id="todoList"><div class="loading">加载中...</div></div>
-            </div>
-            <div class="mini-panel" id="mini-ledger">
+            <div class="mini-panel active" id="mini-ledger">
                 <div class="shdr">小账本<span class="cnt" id="ledgerCnt"></span></div>
                 <div class="ledger-summary" id="ledgerSummary"></div>
                 <div class="add-row" style="flex-wrap:wrap">
@@ -392,6 +387,11 @@
                     <button onclick="addLedger()" style="flex-shrink:0">记一笔</button>
                 </div>
                 <div id="ledgerList"><div class="loading">加载中...</div></div>
+            </div>
+            <div class="mini-panel" id="mini-todo">
+                <div class="shdr">每日待办<span class="cnt" id="todoCnt"></span></div>
+                <div class="todo-input"><input type="text" id="todoIn" placeholder="写一件要做的事"><button onclick="addTodo()">添加</button></div>
+                <div id="todoList"><div class="loading">加载中...</div></div>
             </div>
         </div>
         <div class="life-sub" id="sub-music">
