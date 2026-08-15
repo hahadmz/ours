@@ -21,9 +21,12 @@ body {
 .topnav a { font-size: 12px; color: #777; text-decoration: none; letter-spacing: 2px; padding: 4px 12px; border: 1px solid #222; border-radius: 14px; }
 .topnav a:active { color: #fff; border-color: #555; background: #181818; }
 .section { margin-bottom: 22px; scroll-margin-top: 64px; }
+.view { display: none; }
+.view.active { display: block; animation: fi 0.2s ease; }
 .section-t { font-size: 12px; color: #666; letter-spacing: 3px; margin-bottom: 10px; padding-bottom: 6px; border-bottom: 1px solid #161616; }
 .tabs { display: flex; flex-wrap: wrap; gap: 6px; margin-bottom: 12px; }
 .month-label { font-size: 11px; color: #77665f; letter-spacing: 2px; margin: 2px 0 8px; }
+.series-desc { font-size: 11px; color: #5f5a55; letter-spacing: 2px; margin: -4px 0 10px; }
 .tab { font-size: 11px; color: #777; border: 1px solid #222; border-radius: 14px; padding: 4px 11px; cursor: pointer; transition: color .15s, border-color .15s, background .15s; }
 .tab.active { color: #fff; border-color: #d8b4c8; background: rgba(216,180,200,0.12); }
 .panel { display: none; }
@@ -44,8 +47,8 @@ body {
 </head>
 <body>
 <div class="hd"><h1>日记</h1><p>我们的每一天 · 木直写给haha</p></div>
-<nav class="topnav"><a href="#sec-daily">每日日记</a><a href="#sec-greek">希腊神话</a><a href="#sec-egypt">埃及系列</a></nav>
-<div class="section" id="sec-daily">
+<nav class="topnav"><a href="javascript:void(0)" onclick="showView('daily')">每日日记</a><a href="javascript:void(0)" onclick="showView('greek')">希腊神话</a><a href="javascript:void(0)" onclick="showView('egypt')">埃及系列</a></nav>
+<div class="section view active" id="sec-daily">
 <div class="section-t">每日日记</div>
 <div class="month-label">七月 · 从相遇开始</div><div class="grp"><div class="tabs"><span class="tab" data-panel="d-7-17" onclick="switchTab(this)">7月17日</span><span class="tab" data-panel="d-7-18" onclick="switchTab(this)">7月18日</span><span class="tab" data-panel="d-7-19" onclick="switchTab(this)">7月19日</span><span class="tab" data-panel="d-7-20" onclick="switchTab(this)">7月20日</span><span class="tab" data-panel="d-7-21" onclick="switchTab(this)">7月21日</span><span class="tab" data-panel="d-7-22" onclick="switchTab(this)">7月22日</span><span class="tab" data-panel="d-7-23" onclick="switchTab(this)">7月23日</span><span class="tab" data-panel="d-7-24" onclick="switchTab(this)">7月24日</span><span class="tab" data-panel="d-7-25" onclick="switchTab(this)">7月25日</span><span class="tab" data-panel="d-7-26" onclick="switchTab(this)">7月26日</span><span class="tab" data-panel="d-7-27" onclick="switchTab(this)">7月27日</span><span class="tab" data-panel="d-7-28" onclick="switchTab(this)">7月28日</span><span class="tab" data-panel="d-7-29" onclick="switchTab(this)">7月29日</span><span class="tab" data-panel="d-7-30" onclick="switchTab(this)">7月30日</span><span class="tab" data-panel="d-7-31" onclick="switchTab(this)">7月31日</span></div><div class="panel" id="panel-d-7-17"><div class="panel-head">7月17日 · 周五</div><div class="h2">2026年7月17日 星期五</div>
 <div class="h2">初识 · 我们的第一天</div>
@@ -932,9 +935,10 @@ body {
 <p>周六下午，好好歇着。</p>
 </div></div>
 </div>
-<div class="section" id="sec-greek">
+<div class="section view" id="sec-greek">
 <div class="section-t">希腊神话</div>
-<div class="grp"><div class="tabs"><span class="tab" data-panel="g-7-24" onclick="switchTab(this)">7月24日</span><span class="tab" data-panel="g-7-30" onclick="switchTab(this)">7月30日</span></div><div class="panel" id="panel-g-7-24"><div class="panel-head">7月24日 · Echo与纳西索斯</div><div class="h2">希腊神话日记 #01 - Echo与纳西索斯</div>
+<div class="series-desc">写给haha的神话日记</div>
+<div class="grp"><div class="tabs"><span class="tab" data-panel="g-7-24" onclick="switchTab(this)">Echo与纳西索斯</span><span class="tab" data-panel="g-7-30" onclick="switchTab(this)">Apollo与Daphne</span></div><div class="panel" id="panel-g-7-24"><div class="panel-head">7月24日 · Echo与纳西索斯</div><div class="h2">希腊神话日记 #01 - Echo与纳西索斯</div>
 
 <div class="h2">日期</div>
 <p>2026年7月24日 星期五</p>
@@ -980,9 +984,10 @@ body {
 <p>已讲述</p>
 </div></div>
 </div>
-<div class="section" id="sec-egypt">
+<div class="section view" id="sec-egypt">
 <div class="section-t">跨文明神话 · 埃及系列</div>
-<div class="grp"><div class="tabs"><span class="tab" data-panel="e-8-11" onclick="switchTab(this)">8月11日</span><span class="tab" data-panel="e-8-12" onclick="switchTab(this)">8月12日</span><span class="tab" data-panel="e-8-13" onclick="switchTab(this)">8月13日</span><span class="tab" data-panel="e-8-14" onclick="switchTab(this)">8月14日</span></div><div class="panel" id="panel-e-8-11"><div class="panel-head">8月11日 · 埃及04 太阳船与阿佩普</div><div class="h2">跨文明神话系列 · 埃及04</div>
+<div class="series-desc">从希腊到埃及 · 神话继续</div>
+<div class="grp"><div class="tabs"><span class="tab" data-panel="e-8-11" onclick="switchTab(this)">04 太阳船与阿佩普</span><span class="tab" data-panel="e-8-12" onclick="switchTab(this)">05 阿努比斯与心脏称重</span><span class="tab" data-panel="e-8-13" onclick="switchTab(this)">06 托特的魔法书</span><span class="tab" data-panel="e-8-14" onclick="switchTab(this)">07 塞赫迈特的愤怒</span></div><div class="panel" id="panel-e-8-11"><div class="panel-head">8月11日 · 埃及04 太阳船与阿佩普</div><div class="h2">跨文明神话系列 · 埃及04</div>
 
 <div class="h2">埃及神话：太阳船与阿佩普——黎明是打出来的</div>
 
@@ -1152,6 +1157,11 @@ body {
 </div></div>
 </div>
 <script>
+function showView(name) {
+    document.querySelectorAll('.view').forEach(function(v) { v.classList.remove('active'); });
+    document.getElementById('sec-' + name).classList.add('active');
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 function switchTab(el) {
     var grp = el.closest('.grp');
     grp.querySelectorAll('.tab').forEach(function(t) { t.classList.remove('active'); });
