@@ -1057,7 +1057,7 @@
         try {
             var result = await supabase.from('messages').select('*').order('id', { ascending: true });
             if (result.error) { console.error('loadMessages error:', result.error); return; }
-            messages = (result.data || []).filter(function(m) { return m.author !== 'ledger' && m.author !== 'wish' && m.author !== 'movie'; });
+            messages = (result.data || []).filter(function(m) { return m.author !== 'ledger' && m.author !== 'wish' && m.author !== 'movie' && m.author !== 'cipher'; });
             renderMsgs();
         } catch(e) { console.error(e); }
     }
