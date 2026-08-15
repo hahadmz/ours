@@ -72,6 +72,13 @@
         .song-del { color: #333; cursor: pointer; font-size: 15px; padding: 2px 6px; }
         .song-play { font-size: 11px; color: #555; cursor: pointer; margin-left: 6px; }
         .song-play:hover { color: #999; }
+        .movie-item { display: flex; align-items: flex-start; gap: 12px; padding: 14px 0; border-bottom: 1px solid #141414; }
+        .movie-info { flex: 1; }
+        .movie-name { font-size: 14px; color: #bbb; }
+        .movie-date { font-size: 10px; color: #555; font-family: 'Courier New', monospace; letter-spacing: 1px; margin-top: 4px; }
+        .movie-note { font-size: 12px; color: #777; line-height: 1.7; margin-top: 7px; padding-left: 10px; border-left: 2px solid #222; }
+        .movie-del { color: #333; cursor: pointer; font-size: 15px; padding: 2px 6px; }
+        .movie-del:hover { color: #666; }
         .add-row { display: flex; gap: 6px; margin-bottom: 14px; flex-wrap: wrap; }
         .add-row input { flex: 1; min-width: 70px; background: #141414; border: 1px solid #252525; border-radius: 8px; padding: 10px; color: #ccc; font-size: 13px; outline: none; }
         .add-row input:focus { border-color: #444; }
@@ -349,7 +356,7 @@
                 <div class="life-tabs">
             <span class="life-tab active" data-sub="group-text">文字</span>
             <span class="life-tab" data-sub="group-daily">日常</span>
-            <span class="life-tab" data-sub="sub-music">听歌</span>
+            <span class="life-tab" data-sub="sub-music">影音</span>
             <span class="life-tab" data-sub="sub-wish">愿望</span>
         </div>
         <div class="life-sub active" id="group-text">
@@ -395,15 +402,30 @@
             </div>
         </div>
         <div class="life-sub" id="sub-music">
-            <div class="shdr">一起听歌<span class="cnt" id="musicCnt"></span></div>
-            <div class="add-row" style="flex-wrap:wrap">
-                <input type="text" id="songIn" placeholder="歌名" style="flex:1;min-width:120px">
-                <input type="text" id="artistIn" placeholder="歌手" style="flex:1;min-width:100px">
-                <input type="text" id="linkIn" placeholder="链接（可选）" style="flex:2;min-width:160px">
-                <button onclick="addSong()" style="flex-shrink:0">添加</button>
+            <div class="mini-tabs">
+                <span class="mini-tab active" data-mini="mini-songs">听歌</span>
+                <span class="mini-tab" data-mini="mini-movies">电影</span>
             </div>
-            <div id="songList"><div class="loading">加载中...</div></div>
-            <div id="playerBox" style="margin-top:16px"></div>
+            <div class="mini-panel active" id="mini-songs">
+                <div class="shdr">一起听歌<span class="cnt" id="musicCnt"></span></div>
+                <div class="add-row" style="flex-wrap:wrap">
+                    <input type="text" id="songIn" placeholder="歌名" style="flex:1;min-width:120px">
+                    <input type="text" id="artistIn" placeholder="歌手" style="flex:1;min-width:100px">
+                    <input type="text" id="linkIn" placeholder="链接（可选）" style="flex:2;min-width:160px">
+                    <button onclick="addSong()" style="flex-shrink:0">添加</button>
+                </div>
+                <div id="songList"><div class="loading">加载中...</div></div>
+                <div id="playerBox" style="margin-top:16px"></div>
+            </div>
+            <div class="mini-panel" id="mini-movies">
+                <div class="shdr">一起看电影<span class="cnt" id="movieCnt"></span></div>
+                <div class="add-row" style="flex-wrap:wrap">
+                    <input type="text" id="movieIn" placeholder="片名" style="flex:1;min-width:120px">
+                    <input type="date" id="movieDateIn" style="flex:1;min-width:130px;background:#141414;border:1px solid #252525;border-radius:8px;padding:10px;color:#aaa;font-size:12px;color-scheme:dark">
+                    <button onclick="addMovie()" style="flex-shrink:0">记下</button>
+                </div>
+                <div id="movieList"><div class="loading">加载中...</div></div>
+            </div>
         </div>
         <div class="life-sub" id="sub-wish">
             <div class="shdr">愿望银行<span class="cnt" id="wishCnt"></span></div>
@@ -1210,6 +1232,58 @@
     document.getElementById('songIn').addEventListener('keydown', function(e) { if (e.key === 'Enter') addSong(); });
     document.getElementById('artistIn').addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('linkIn').focus(); });
     document.getElementById('linkIn').addEventListener('keydown', function(e) { if (e.key === 'Enter') addSong(); });
+
+    /* ── 电影 ── */
+    var movies = [];
+    async function loadMovies() {
+        if (!supabase) return;
+        try {
+            var result = await supabase.from('messages').select('*').eq('author', 'movie').order('id', { ascending: true });
+            if (result.error) { console.error('loadMovies error:', result.error); return; }
+            movies = result.data || [];
+            renderMovies();
+        } catch(e) { console.error(e); }
+    }
+
+    function movieInfo(m) {
+        try { return JSON.parse(m.text); } catch(e) { return { name: m.text || '', date: m.date || '', note: '' }; }
+    }
+
+    function renderMovies() {
+        var html = '';
+        for (var i = movies.length - 1; i >= 0; i--) {
+            var m = movies[i];
+            var obj = movieInfo(m);
+            var dateLabel = obj.date || m.date || '';
+            if (dateLabel.length > 10) dateLabel = dateLabel.substring(0, 10);
+            html += '<div class="movie-item"><div class="movie-info"><div class="movie-name">' + esc(obj.name) + '</div><div class="movie-date">' + esc(dateLabel) + ' 一起看的</div>' + (obj.note ? '<div class="movie-note">' + esc(obj.note).replace(/\n/g,'<br>') + '</div>' : '') + '</div><span class="movie-del" onclick="delMovie(' + m.id + ')">&times;</span></div>';
+        }
+        document.getElementById('movieList').innerHTML = html || '<div style="text-align:center;color:#333;font-size:13px;padding:20px 0">还没有电影，记下第一部吧</div>';
+        document.getElementById('movieCnt').textContent = movies.length ? movies.length + '部' : '';
+    }
+
+    async function addMovie() {
+        if (!supabase) { alert('数据未连接'); return; }
+        var inp = document.getElementById('movieIn');
+        var v = inp.value.trim();
+        if (!v) { alert('写个片名吧'); return; }
+        var dIn = document.getElementById('movieDateIn');
+        var ds = dIn.value || new Date().toISOString().slice(0, 10);
+        var entry = JSON.stringify({ name: v, date: ds, note: '' });
+        var result = await supabase.from('messages').insert({
+            date: ds, author: 'movie', text: entry, likes: 0, comments: []
+        });
+        if (result.error) { alert('存不了，等下再试'); console.error(result.error); return; }
+        inp.value = '';
+        dIn.value = '';
+        await loadMovies();
+    }
+
+    async function delMovie(id) {
+        await supabase.from('messages').delete().eq('id', id);
+        await loadMovies();
+    }
+    document.getElementById('movieIn').addEventListener('keydown', function(e) { if (e.key === 'Enter') addMovie(); });
 
     /* ── 初始化数据 ── */
     async function init() {
