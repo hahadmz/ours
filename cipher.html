@@ -73,7 +73,123 @@ body {
 
 <div class="tip">以后你发我暗号，我就知道你在想什么。<br>这是我们之间的小词典。</div>
 
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+var SUPABASE_URL = 'https://wcwagekqzhuwzajvhuvd.supabase.co';
+var SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Indjd2FnZWtxemh1d3phanZodXZkIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODYxNzg2OTEsImV4cCI6MjEwMTc1NDY5MX0.sMM7B5PNpEafGT4xL82LqeUHAUBiQd944jTDW9cMyGc';
+var cipherData = [];
+var cipherWho = 'haha';
+
+function api(path, opts) {
+    opts = opts || {};
+    opts.headers = Object.assign({
+        'apikey': SUPABASE_KEY,
+        'Authorization': 'Bearer ' + SUPABASE_KEY
+    }, opts.headers || {});
+    if (opts.body) {
+        opts.headers['Content-Type'] = 'application/json';
+    }
+    return fetch(SUPABASE_URL + '/rest/v1/' + path, opts);
+}
+
+function init() {
+    loadCiphers();
+    bind();
+}
+
+function loadCiphers() {
+    var list = document.getElementById('cipherList');
+    api('messages?author=eq.cipher&select=*&order=id.desc')
+        .then(function(r) { return r.json(); })
+        .then(function(data) {
+            cipherData = Array.isArray(data) ? data : [];
+            render();
+        })
+        .catch(function(err) {
+            console.error('loadCiphers error:', err);
+            list.innerHTML = '<div class="loading">加载失败，检查一下网络</div>';
+        });
+}
+
+function render() {
+    var list = document.getElementById('cipherList');
+    document.getElementById('cipherCnt').textContent = cipherData.length + ' 条';
+    if (!cipherData.length) {
+        list.innerHTML = '<div class="empty">还没有暗号，写第一个吧</div>';
+        return;
+    }
+    var html = '';
+    cipherData.forEach(function(m) {
+        var obj = parseObj(m.text);
+        if (!obj || !obj.code) return;
+        var by = obj.by === 'muzhi' ? 'muzhi' : 'haha';
+        var byLabel = by === 'muzhi' ? '木直' : 'haha';
+        html += '<div class="cipher-item by-' + by + ' item-anim">'
+            + '<div class="ci-top"><span class="ci-code">' + esc(obj.code) + '</span>'
+            + '<span class="ci-by by-' + by + '">' + byLabel + '</span>'
+            + '<span class="ci-del" data-id="' + m.id + '">✕</span></div>'
+            + '<div class="ci-mean">' + esc(obj.mean) + '</div>'
+            + '</div>';
+    });
+    list.innerHTML = html || '<div class="empty">还没有暗号，写第一个吧</div>';
+    list.querySelectorAll('.ci-del').forEach(function(del) {
+        del.addEventListener('click', function() {
+            if (confirm('删掉这条暗号？')) {
+                api('messages?id=eq.' + del.getAttribute('data-id'), { method: 'DELETE' })
+                    .then(function() { loadCiphers(); })
+                    .catch(function(err) { console.error('delete error:', err); });
+            }
+        });
+    });
+}
+
+function parseObj(text) {
+    try { return JSON.parse(text); } catch(e) { return null; }
+}
+
+function esc(s) {
+    return String(s || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function bind() {
+    document.getElementById('whoHaha').addEventListener('click', function() { setWho('haha'); });
+    document.getElementById('whoMuzhi').addEventListener('click', function() { setWho('muzhi'); });
+    document.getElementById('addBtn').addEventListener('click', addCipher);
+    document.getElementById('codeIn').addEventListener('keydown', function(e) { if (e.key === 'Enter') document.getElementById('meanIn').focus(); });
+    document.getElementById('meanIn').addEventListener('keydown', function(e) { if (e.key === 'Enter') addCipher(); });
+}
+
+function setWho(w) {
+    cipherWho = w;
+    document.getElementById('whoHaha').className = w === 'haha' ? 'active-haha' : '';
+    document.getElementById('whoMuzhi').className = w === 'muzhi' ? 'active-muzhi' : '';
+}
+
+function addCipher() {
+    var code = document.getElementById('codeIn').value.trim();
+    var mean = document.getElementById('meanIn').value.trim();
+    if (!code || !mean) { alert('暗号和意思都要写哦'); return; }
+    var obj = { code: code, mean: mean, by: cipherWho };
+    api('messages', {
+        method: 'POST',
+        body: JSON.stringify([{
+            date: new Date().toISOString().slice(0, 10),
+            author: 'cipher',
+            text: JSON.stringify(obj),
+            created_at: new Date().toISOString()
+        }])
+    }).then(function(r) {
+        if (!r.ok) { alert('没写进去，再试一次'); return; }
+        document.getElementById('codeIn').value = '';
+        document.getElementById('meanIn').value = '';
+        loadCiphers();
+    }).catch(function(err) {
+        console.error('addCipher error:', err);
+        alert('没写进去，再试一次');
+    });
+}
+
+init();
+</script>
 <script>
 var supabase = null;
 var cipherData = [];
