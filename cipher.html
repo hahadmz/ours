@@ -159,6 +159,7 @@ function addCipher() {
     if (!code || !mean) { alert('暗号和意思都要写哦'); return; }
     var obj = { code: code, mean: mean, by: cipherWho };
     supabase.from('messages').insert({
+        date: new Date().toISOString().slice(0, 10),
         author: 'cipher',
         text: JSON.stringify(obj),
         created_at: new Date().toISOString()
