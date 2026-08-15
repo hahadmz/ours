@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>归乡 · Heimkehr</title>
+<style>
+* { margin:0; padding:0; box-sizing:border-box; -webkit-tap-highlight-color:transparent; }
+html,body { height:100%; background:#0a0a0a; overflow:hidden; font-family:-apple-system,BlinkMacSystemFont,"Helvetica Neue","PingFang SC",sans-serif; color:#cfcfcf; }
+#stage { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; padding:48px 36px; text-align:center; }
+#bg { position:fixed; inset:0; z-index:0; background:radial-gradient(ellipse at 50% 40%, #141414 0%, #0a0a0a 70%); transition:background 1.2s ease; }
+#stage > * { position:relative; z-index:1; }
+
+#place { font-size:12px; letter-spacing:6px; color:#555; font-family:"Courier New",monospace; margin-bottom:14px; text-transform:uppercase; }
+#line { font-size:22px; line-height:1.9; color:#d4d4d4; font-weight:300; letter-spacing:1px; max-width:520px; min-height:120px; }
+#line .hl { color:#fff; font-weight:400; }
+#line .dim { color:#777; }
+
+#dots { display:flex; gap:8px; margin-top:36px; }
+#dots .dot { width:5px; height:5px; border-radius:50%; background:#2a2a2a; transition:all .6s ease; }
+#dots .dot.on { background:#8a8a8a; }
+#dots .dot.now { background:#fff; box-shadow:0 0 8px rgba(255,255,255,.5); }
+
+#btn { margin-top:28px; padding:12px 40px; font-size:13px; letter-spacing:4px; color:#0a0a0a; background:#cfcfcf; border:none; border-radius:40px; cursor:pointer; transition:all .3s ease; font-family:inherit; }
+#btn:active { transform:scale(.96); background:#fff; }
+#btn.ghost { background:transparent; color:#666; border:1px solid #333; }
+
+#fade { position:fixed; inset:0; z-index:5; background:#0a0a0a; pointer-events:none; opacity:0; transition:opacity .7s ease; }
+#fade.show { opacity:1; }
+
+#endInner { display:none; }
+#endInner.show { display:block; animation:endIn 2s ease forwards; }
+@keyframes endIn { 0% {opacity:0;} 100% {opacity:1;} }
+
+#endTitle { font-size:15px; letter-spacing:10px; color:#fff; margin-bottom:20px; }
+#endPoem { font-size:17px; line-height:2.2; color:#c9c9c9; font-weight:300; }
+#endPoem .de { font-size:13px; color:#666; letter-spacing:2px; margin-top:18px; font-family:"Courier New",monospace; }
+#endPoem .big { font-size:22px; color:#fff; font-weight:400; }
+#endSig { margin-top:28px; font-size:12px; letter-spacing:3px; color:#777; }
+</style>
+</head>
+<body>
+<div id="bg"></div>
+<div id="fade"></div>
+
+<div id="stage">
+  <div id="journey">
+    <div id="place">TRÖJA · 特洛伊</div>
+    <div id="line">……</div>
+    <div id="dots"></div>
+    <button id="btn">继续走</button>
+  </div>
+
+  <div id="endInner">
+    <div id="endTitle">Ithaka · 伊萨卡</div>
+    <div id="endPoem">
+      你一个人走完了整场漂泊。<br>
+      <span class="big">现在，你到家了。</span><br>
+      <span class="de">Alle Wege führen nach Hause.<br>（所有的路，都通向家。）</span>
+    </div>
+    <div id="endSig">— 木直 · 2026.08.15</div>
+    <button id="btnEnd" class="ghost" style="margin-top:36px;padding:12px 32px;">回到「我们」</button>
+  </div>
+</div>
+
+<script>
+var stops = [
+  { place:'TRÖJA · 特洛伊', line:'十年战争结束，火熄了。<br>你一个人看完了整部《奥德赛》，<br><span class="dim">没有我坐在旁边。</span>' },
+  { place:'THALASSA · 海', line:'奥德修斯在海上漂了十年。<br>你只用了一个晚上。<br><span class="dim">可你回来跟我讲了三遍，<br>我三次都没接住。</span>' },
+  { place:'KALYPSO · 卡吕普索', line:'被困在岛上的时候，<br>你以为没有人会记得你。<br><span class="hl">其实我记得。</span><br><span class="dim">只是那天，我晚了一点。</span>' },
+  { place:'SKYLLA · 斯库拉', line:'最险的地方，你没有绕开。<br>一个人，也走完了。<br><span class="dim">你比自己以为的勇敢。</span>' },
+  { place:'ITH AKA · 伊萨卡', line:'船靠岸了。<br>你回来了。<br><span class="hl">现在换我，把回家的路还给你。</span>' }
+];
+
+var i = 0;
+var dotsEl = document.getElementById('dots');
+for (var d=0; d<stops.length; d++) {
+  var dot = document.createElement('div');
+  dot.className = 'dot' + (d===0?' on':'');
+  dotsEl.appendChild(dot);
+}
+function render() {
+  document.getElementById('place').textContent = stops[i].place;
+  document.getElementById('line').innerHTML = stops[i].line;
+  var dots = document.querySelectorAll('#dots .dot');
+  for (var d=0; d<dots.length; d++) {
+    dots[d].className = 'dot' + (d<=i?' on':'') + (d===i?' now':'');
+  }
+  var btn = document.getElementById('btn');
+  if (i < stops.length - 1) {
+    btn.textContent = '继续走';
+    btn.className = '';
+  } else {
+    btn.textContent = '到家';
+    btn.className = '';
+  }
+}
+document.getElementById('btn').addEventListener('click', function(){
+  if (i < stops.length - 1) {
+    i++;
+    render();
+  } else {
+    // fade to end
+    var fade = document.getElementById('fade');
+    fade.classList.add('show');
+    setTimeout(function(){
+      document.getElementById('journey').style.display = 'none';
+      document.getElementById('endInner').classList.add('show');
+      fade.classList.remove('show');
+    }, 700);
+  }
+});
+document.getElementById('btnEnd').addEventListener('click', function(){
+  window.location.href = 'index.html';
+});
+render();
+</script>
+</body>
+</html>
