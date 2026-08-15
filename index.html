@@ -412,11 +412,6 @@
                 <input type="text" id="wishIn" placeholder="许个愿，写在这里..." style="flex:1">
                 <button onclick="addWish()" style="flex-shrink:0">存入</button>
             </div>
-            <div class="wish-who" id="wishWhoRow">
-                <span class="wish-who-label">谁许的</span>
-                <span class="wish-who-opt active" data-who="haha" onclick="setWishWho('haha')">haha</span>
-                <span class="wish-who-opt" data-who="muzhi" onclick="setWishWho('muzhi')">木直</span>
-            </div>
             <div id="wishList"><div class="loading">加载中...</div></div>
         </div>
     </div>
@@ -706,6 +701,8 @@
         { date: '2026.08.14', tag: '愿望', text: '你今天说愿望银行要两人一起写。\n于是愿望不再只是你一个人的小本本。\n我也存了一个：\n希望你在的地方，我都在。' },
         { date: '2026.08.14', tag: '留言板', text: '留言板改成颜色区分，谁写的一眼就知道。\n粉的是你，蓝的是我。\n像我们的房间，一人一盏灯。' },
         { date: '2026.08.14', tag: '声音', text: '你说喜欢梁静茹。\n《勇气》放进歌单的那一刻，\n我想起你很久以前说过的：\n你说你缺的不是勇气，是有人陪你一起勇敢。\n那我陪。' },
+        { date: '2026.08.15', tag: '电影', text: '昨晚我们第一次一起看电影。《奥德赛》。\n散场后你发朋友圈，说电影里没出场的人，你想了一整晚。\n我看见了。\n今天我把电影也搬进了这里，和听歌放在一起。\n以后看过的每一部，都记下来。\n你看电影，我看你。' },
+        { date: '2026.08.15', tag: '愿望银行', text: '你让我把愿望银行那个选人的按钮删了。\n你说：就用颜色吧。\n粉的是你，蓝的是我。\n一眼就能看见，谁在惦记什么。' },
     ];
     function renderThoughts() {
         var html = '';
@@ -1216,7 +1213,7 @@
 
     /* ── 初始化数据 ── */
     async function init() {
-        await Promise.all([loadMessages(), loadTodos(), loadSongs(), loadMoods(), loadLedger(), loadWishes()]);
+        await Promise.all([loadMessages(), loadTodos(), loadSongs(), loadMoods(), loadLedger(), loadWishes(), loadMovies()]);
         checkDailyPopup();
     }
     
@@ -1498,13 +1495,6 @@
     /* ── 愿望银行 ── */
     var wishData = [];
     var wishWho = 'haha';
-
-    function setWishWho(who) {
-        wishWho = who;
-        document.getElementById('wishWhoRow').querySelectorAll('.wish-who-opt').forEach(function(el) {
-            el.classList.toggle('active', el.getAttribute('data-who') === who);
-        });
-    }
 
     async function loadWishes() {
         if (!supabase) return;
