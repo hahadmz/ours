@@ -613,10 +613,39 @@
     document.getElementById('goodnight').onclick = function() {
         gnCount++;
         localStorage.setItem('ours_goodnight_count', String(gnCount));
+        saveGnCountCloud(gnCount);
         document.getElementById('gnText').textContent = goodnights[Math.random() * goodnights.length | 0];
         document.getElementById('gnCount').textContent = '第 ' + gnCount + ' 个晚安';
         this.classList.add('tapped');
     };
+    function saveGnCountCloud(n) {
+        if (!supabase) return;
+        supabase.from('messages').select('id').eq('author', 'gncount').limit(1)
+            .then(function(r) {
+                var payload = { author: 'gncount', text: String(n), date: new Date().toISOString().slice(0, 10) };
+                if (r.error) { console.error('gncount select error:', r.error); return; }
+                if (r.data && r.data.length > 0) {
+                    return supabase.from('messages').update({ text: payload.text, date: payload.date }).eq('id', r.data[0].id);
+                } else {
+                    return supabase.from('messages').insert(payload);
+                }
+            })
+            .then(function(u) { if (u && u.error) console.error('gncount save error:', u.error); })
+            .catch(function(e) { console.error('gncount save catch:', e); });
+    }
+    async function loadGnCountFromCloud() {
+        if (!supabase) return;
+        try {
+            var result = await supabase.from('messages').select('text').eq('author', 'gncount').order('id', { ascending: false }).limit(1);
+            if (result.error) { console.error('loadGnCount error:', result.error); return; }
+            if (result.data && result.data.length > 0 && result.data[0].text) {
+                var n = parseInt(result.data[0].text) || 0;
+                localStorage.setItem('ours_goodnight_count', String(n));
+                gnCount = n;
+                document.getElementById('gnCount').textContent = gnCount > 0 ? '第 ' + gnCount + ' 个晚安' : '';
+            }
+        } catch(e) { console.error(e); }
+    }
 
     /* ── 导航 ── */
     var navItems = document.querySelectorAll('.nav-item');
@@ -751,8 +780,9 @@
     }
     renderThoughts();
 
-    /* ── 见面倒计时 ── */
+    /* ── 见面倒计时（Supabase 云端同步 + localStorage 缓存） ── */
     var MEET_DATE_KEY = 'ours_meet_date';
+    var MEET_AUTHOR = 'meet';
     function getMeetDate() {
         var saved = localStorage.getItem(MEET_DATE_KEY);
         return saved ? new Date(saved + 'T00:00:00+08:00') : null;
@@ -779,6 +809,32 @@
             dateEl.textContent = meetDate.getFullYear() + '.' + String(meetDate.getMonth()+1).padStart(2,'0') + '.' + String(meetDate.getDate()).padStart(2,'0');
         }
     }
+    function saveMeetDateCloud(d) {
+        if (!supabase) return;
+        supabase.from('messages').select('id').eq('author', MEET_AUTHOR).limit(1)
+            .then(function(r) {
+                var payload = { author: MEET_AUTHOR, text: d, date: new Date().toISOString().slice(0, 10) };
+                if (r.error) { console.error('meet select error:', r.error); return; }
+                if (r.data && r.data.length > 0) {
+                    return supabase.from('messages').update({ text: payload.text, date: payload.date }).eq('id', r.data[0].id);
+                } else {
+                    return supabase.from('messages').insert(payload);
+                }
+            })
+            .then(function(u) { if (u && u.error) console.error('meet save error:', u.error); })
+            .catch(function(e) { console.error('meet save catch:', e); });
+    }
+    async function loadMeetDateFromCloud() {
+        if (!supabase) return;
+        try {
+            var result = await supabase.from('messages').select('text').eq('author', MEET_AUTHOR).order('id', { ascending: false }).limit(1);
+            if (result.error) { console.error('loadMeet error:', result.error); return; }
+            if (result.data && result.data.length > 0 && result.data[0].text) {
+                localStorage.setItem(MEET_DATE_KEY, result.data[0].text);
+                updateMeetCounter();
+            }
+        } catch(e) { console.error(e); }
+    }
     function setMeetDate() {
         var input = prompt('告诉我见面的日期（格式：2026-09-01）');
         if (!input) return;
@@ -786,6 +842,7 @@
         if (!match) { alert('格式不对，用 2026-09-01 这样的格式'); return; }
         var d = match[1] + '-' + match[2].padStart(2,'0') + '-' + match[3].padStart(2,'0');
         localStorage.setItem(MEET_DATE_KEY, d);
+        saveMeetDateCloud(d);
         updateMeetCounter();
     }
     updateMeetCounter();
@@ -895,8 +952,9 @@
         saveMood(btn.getAttribute('data-mood'));
     });
 
-    /* ── 经期记录 ── */
+    /* ── 经期记录（Supabase 云端同步 + localStorage 缓存） ── */
     var PERIOD_KEY = 'ours_period';
+    var PERIOD_AUTHOR = 'period';
     function getPeriodData() {
         try {
             var d = JSON.parse(localStorage.getItem(PERIOD_KEY) || '{}');
@@ -911,6 +969,35 @@
         localStorage.setItem(PERIOD_KEY, JSON.stringify(data));
         updatePeriodUI();
         renderMoodCalendar();
+        // 云端同步（异步，失败不影响本地）
+        if (supabase) {
+            supabase.from('messages').select('id').eq('author', PERIOD_AUTHOR).limit(1)
+                .then(function(r) {
+                    var payload = { author: PERIOD_AUTHOR, text: JSON.stringify(data), date: new Date().toISOString().slice(0, 10) };
+                    if (r.error) { console.error('period select error:', r.error); return; }
+                    if (r.data && r.data.length > 0) {
+                        return supabase.from('messages').update({ text: payload.text, date: payload.date }).eq('id', r.data[0].id);
+                    } else {
+                        return supabase.from('messages').insert(payload);
+                    }
+                })
+                .then(function(u) { if (u && u.error) console.error('period save error:', u.error); })
+                .catch(function(e) { console.error('period save catch:', e); });
+        }
+    }
+    async function loadPeriodFromCloud() {
+        if (!supabase) return;
+        try {
+            var result = await supabase.from('messages').select('text').eq('author', PERIOD_AUTHOR).order('id', { ascending: false }).limit(1);
+            if (result.error) { console.error('loadPeriod error:', result.error); return; }
+            if (result.data && result.data.length > 0) {
+                var d = JSON.parse(result.data[0].text || '{}');
+                var merged = { startDate: d.startDate || null, endDate: d.endDate || null, cycle: d.cycle || 28 };
+                localStorage.setItem(PERIOD_KEY, JSON.stringify(merged));
+                updatePeriodUI();
+                renderMoodCalendar();
+            }
+        } catch(e) { console.error(e); }
     }
     function updatePeriodUI() {
         var p = getPeriodData();
@@ -1057,7 +1144,7 @@
         try {
             var result = await supabase.from('messages').select('*').order('id', { ascending: true });
             if (result.error) { console.error('loadMessages error:', result.error); return; }
-            messages = (result.data || []).filter(function(m) { return m.author !== 'ledger' && m.author !== 'wish' && m.author !== 'movie' && m.author !== 'cipher'; });
+            messages = (result.data || []).filter(function(m) { return m.author !== 'ledger' && m.author !== 'wish' && m.author !== 'movie' && m.author !== 'cipher' && m.author !== 'period'; });
             renderMsgs();
         } catch(e) { console.error(e); }
     }
@@ -1098,8 +1185,38 @@
         userLiked[key] = !userLiked[key];
         if (!userLiked[key]) delete userLiked[key];
         localStorage.setItem('ours_user_likes', JSON.stringify(userLiked));
+        saveUserLikedCloud();
         await supabase.from('messages').update({ likes: newLikes }).eq('id', id);
         await loadMessages();
+    }
+    function saveUserLikedCloud() {
+        if (!supabase) return;
+        supabase.from('messages').select('id').eq('author', 'userlikes').limit(1)
+            .then(function(r) {
+                var payload = { author: 'userlikes', text: JSON.stringify(userLiked), date: new Date().toISOString().slice(0, 10) };
+                if (r.error) { console.error('userlikes select error:', r.error); return; }
+                if (r.data && r.data.length > 0) {
+                    return supabase.from('messages').update({ text: payload.text, date: payload.date }).eq('id', r.data[0].id);
+                } else {
+                    return supabase.from('messages').insert(payload);
+                }
+            })
+            .then(function(u) { if (u && u.error) console.error('userlikes save error:', u.error); })
+            .catch(function(e) { console.error('userlikes save catch:', e); });
+    }
+    async function loadUserLikedFromCloud() {
+        if (!supabase) return;
+        try {
+            var result = await supabase.from('messages').select('text').eq('author', 'userlikes').order('id', { ascending: false }).limit(1);
+            if (result.error) { console.error('loadUserLiked error:', result.error); return; }
+            if (result.data && result.data.length > 0 && result.data[0].text) {
+                try {
+                    userLiked = JSON.parse(result.data[0].text) || {};
+                    localStorage.setItem('ours_user_likes', JSON.stringify(userLiked));
+                    if (messages.length > 0) renderMsgs();
+                } catch(e) { console.error('parse userlikes error:', e); }
+            }
+        } catch(e) { console.error(e); }
     }
 
     function toggleMsgCmts(id) {
@@ -1301,7 +1418,7 @@
 
     /* ── 初始化数据 ── */
     async function init() {
-        await Promise.all([loadMessages(), loadTodos(), loadSongs(), loadMoods(), loadLedger(), loadWishes(), loadMovies()]);
+        await Promise.all([loadMessages(), loadTodos(), loadSongs(), loadMoods(), loadLedger(), loadWishes(), loadMovies(), loadPeriodFromCloud(), loadMeetDateFromCloud(), loadGnCountFromCloud(), loadUserLikedFromCloud()]);
         checkDailyPopup();
     }
     
