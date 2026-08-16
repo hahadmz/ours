@@ -996,6 +996,12 @@
                 localStorage.setItem(PERIOD_KEY, JSON.stringify(merged));
                 updatePeriodUI();
                 renderMoodCalendar();
+            } else {
+                // 云端无记录但本地有：自动补传
+                var local = getPeriodData();
+                if (local.startDate || local.endDate || local.cycle !== 28) {
+                    savePeriodData(local);
+                }
             }
         } catch(e) { console.error(e); }
     }
