@@ -359,21 +359,6 @@
         <iframe id="diaryFrame" src="diary.html" style="width:100%;height:calc(100vh - 56px);border:none;"></iframe>
     </div>
 
-    <!-- 暗号 -->
-    <div class="page" id="p-cipher" style="padding:0;">
-        <iframe id="cipherFrame" src="cipher.html" style="width:100%;height:calc(100vh - 56px);border:none;"></iframe>
-    </div>
-
-    <!-- 音乐 -->
-    <div class="page" id="p-music" style="padding:0;">
-        <iframe id="musicFrame" src="music.html" style="width:100%;height:calc(100vh - 56px);border:none;"></iframe>
-    </div>
-
-    <!-- 坦白 -->
-    <div class="page" id="p-confession" style="padding:0;">
-        <iframe id="confessionFrame" src="confession.html" style="width:100%;height:calc(100vh - 56px);border:none;"></iframe>
-    </div>
-
     <!-- 生活（留言/想法/待办/相册/听歌） -->
     <div class="page" id="p-life">
                 <div class="life-tabs">
@@ -386,7 +371,9 @@
             <div class="mini-tabs">
                 <span class="mini-tab active" data-mini="mini-msg">留言</span>
                 <span class="mini-tab" data-mini="mini-thoughts">想法</span>
+                <span class="mini-tab" data-mini="mini-confession">坦白</span>
                 <span class="mini-tab" data-mini="mini-stories">故事</span>
+                <span class="mini-tab" data-mini="mini-cipher">暗号</span>
             </div>
             <div class="mini-panel active" id="mini-msg">
                 <div class="shdr">留言板<span class="cnt" id="msgCnt"></span></div>
@@ -401,6 +388,14 @@
                 <div class="shdr">我们的故事<span class="cnt" id="storyCnt"></span></div>
                 <div class="story-toc" id="storyToc"></div>
                 <div id="storyList"></div>
+            </div>
+            <div class="mini-panel" id="mini-confession">
+                <div class="shdr">坦白<span class="cnt"></span></div>
+                <iframe src="confession.html" style="width:100%;height:calc(100vh - 240px);border:none;border-radius:10px;background:#0a0a0a;"></iframe>
+            </div>
+            <div class="mini-panel" id="mini-cipher">
+                <div class="shdr">暗号<span class="cnt"></span></div>
+                <iframe src="cipher.html" style="width:100%;height:calc(100vh - 240px);border:none;border-radius:10px;background:#0a0a0a;"></iframe>
             </div>
         </div>
         <div class="life-sub" id="group-daily">
@@ -428,6 +423,7 @@
             <div class="mini-tabs">
                 <span class="mini-tab active" data-mini="mini-songs">听歌</span>
                 <span class="mini-tab" data-mini="mini-movies">电影</span>
+                <span class="mini-tab" data-mini="mini-music">音乐</span>
             </div>
             <div class="mini-panel active" id="mini-songs">
                 <div class="shdr">一起听歌<span class="cnt" id="musicCnt"></span></div>
@@ -448,6 +444,10 @@
                     <button onclick="addMovie()" style="flex-shrink:0">记下</button>
                 </div>
                 <div id="movieList"><div class="loading">加载中...</div></div>
+            </div>
+            <div class="mini-panel" id="mini-music">
+                <div class="shdr">我偷偷挖到的<span class="cnt"></span></div>
+                <iframe src="music.html" style="width:100%;height:calc(100vh - 240px);border:none;border-radius:10px;background:#0a0a0a;"></iframe>
             </div>
         </div>
         <div class="life-sub" id="sub-wish">
@@ -528,9 +528,6 @@
         <div class="nav-item" data-page="p-life"><span class="nav-icon">▤</span>生活</div>
         <div class="nav-item" data-page="p-mood"><span class="nav-icon">◐</span>心情</div>
         <div class="nav-item" data-page="p-diary"><span class="nav-icon">✎</span>日记</div>
-        <div class="nav-item" data-page="p-cipher"><span class="nav-icon">❦</span>暗号</div>
-        <div class="nav-item" data-page="p-music"><span class="nav-icon">♪</span>音乐</div>
-        <div class="nav-item" data-page="p-confession"><span class="nav-icon">✧</span>坦白</div>
     </div>
 
     <div class="toast" id="toast"></div>
